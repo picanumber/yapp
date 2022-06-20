@@ -5,12 +5,57 @@
 
 #include <atomic>
 #include <functional>
+#include <future>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
 
 namespace yap
 {
+
+/**
+ * @brief Create a future that already contains a result.
+ *
+ * @tparam T Type to wrap into the future.
+ * @tparam Args Types of the arguments passed to T's constructor.
+ * @param ...args Arguments to forward into T's constructor.
+ *
+ * @return A future that contains a value T{args...} or void.
+ */
+template <class T, class... Args>
+std::future<T> make_ready_future(Args &&...args)
+{
+    std::promise<T> p;
+    if constexpr (std::is_void_v<T>)
+    {
+        static_assert(0 == sizeof...(Args),
+                      "future<void> constructible without arguments");
+        p.set_value();
+    }
+    else
+    {
+        p.set_value(T{std::forward<Args>(args)...});
+    }
+
+    return p.get_future();
+}
+
+/**
+ * @brief Create a future that contains an exception.
+ *
+ * @tparam T Type to wrap into the future.
+ * @tparam E Type of the exception to store
+ * @param ex Exception to store in the future.
+ *
+ * @return A future that contains the exception ex.
+ */
+template <class T, class E> std::future<T> make_exceptional_future(E ex)
+{
+    std::promise<T> p;
+    p.set_exception(std::make_exception_ptr(std::move(ex)));
+
+    return p.get_future();
+}
 
 namespace detail
 {
@@ -28,15 +73,15 @@ using function_t = typename Function<IN, OUT>::type;
 
 // Process a transformation stage.
 template <class IN, class OUT>
-void process(std::function<OUT(IN)> &op, BufferQueue<IN> *input,
-             BufferQueue<OUT> *output)
+void process(std::function<OUT(IN)> &op, BufferQueue<std::future<IN>> *input,
+             BufferQueue<std::future<OUT>> *output)
 {
     try
     {
         // expect not null input/output
-        output->push(op(input->pop()));
+        output->push(make_ready_future<OUT>(op(input->pop().get())));
     }
-    catch (std::out_of_range &e)
+    catch (EmptyInput &e)
     {
         // The input queue doesn't want me to wait.
     }
@@ -48,13 +93,14 @@ void process(std::function<OUT(IN)> &op, BufferQueue<IN> *input,
 
 // Process a generator stage.
 template <class OUT>
-void process(std::function<OUT()> &op, BufferQueue<void> * /*input*/,
-             BufferQueue<OUT> *output)
+void process(std::function<OUT()> &op,
+             BufferQueue<std::future<void>> * /*input*/,
+             BufferQueue<std::future<OUT>> *output)
 {
     try
     {
         // expect null input, non null output.
-        output->push(op());
+        output->push(make_ready_future<OUT>(op()));
     }
     catch (...)
     {
@@ -64,15 +110,15 @@ void process(std::function<OUT()> &op, BufferQueue<void> * /*input*/,
 
 // Process a sink stage.
 template <class IN>
-void process(std::function<void(IN)> &op, BufferQueue<IN> *input,
-             BufferQueue<void> * /*output*/)
+void process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
+             BufferQueue<std::future<void>> * /*output*/)
 {
     try
     {
         // expect null output, non null input.
-        op(input->pop());
+        op(input->pop().get());
     }
-    catch (std::out_of_range &e)
+    catch (EmptyInput &e)
     {
         // The input queue doesn't want me to wait.
     }
@@ -87,17 +133,15 @@ void process(std::function<void(IN)> &op, BufferQueue<IN> *input,
 template <class IN, class OUT> class Stage
 {
     detail::function_t<IN, OUT> _operation;
-    BufferQueue<IN> *_input = nullptr;
-    BufferQueue<OUT> *_output = nullptr;
+    BufferQueue<std::future<IN>> *_input = nullptr;
+    BufferQueue<std::future<OUT>> *_output = nullptr;
     std::thread _worker;
     std::mutex _cmdMtx;
     std::atomic_bool _alive{false};
 
   public:
-    Stage() = default; // TODO: Remove this!
-
     template <class F>
-    Stage(F &&operation) : _operation(std::forward<F>(operation))
+    explicit Stage(F &&operation) : _operation(std::forward<F>(operation))
     {
     }
 
@@ -106,15 +150,8 @@ template <class IN, class OUT> class Stage
         stop();
     }
 
-    Stage(Stage &&other)
-        : _operation(std::move(other._operation)), _input(other._input),
-          _output(other._output)
-    {
-        other._input = nullptr;
-        other._output = nullptr;
-    }
-
-    void start(BufferQueue<IN> *input, BufferQueue<OUT> *output)
+    void start(BufferQueue<std::future<IN>> *input,
+               BufferQueue<std::future<OUT>> *output)
     {
         std::lock_guard lk(_cmdMtx);
         if (!_alive)

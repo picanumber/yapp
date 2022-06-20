@@ -4,7 +4,10 @@
 #include "buffer_queue.h"
 #include "stage.h"
 
+#include <future>
+#include <memory>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace yap
@@ -35,6 +38,8 @@ template <template <class, class> class Pair, class... Args> struct paired_list
         std::make_index_sequence<sizeof...(Args) / 2>>::type;
 };
 
+template <class T1, class T2> using StageUptr = std::unique_ptr<Stage<T1, T2>>;
+
 } // namespace detail
 
 /**
@@ -47,7 +52,8 @@ template <template <class, class> class Pair, class... Args> struct paired_list
  * @tparam Args The type-list to transform.
  */
 template <class... Args>
-using stage_list_t = typename detail::paired_list<Stage, Args...>::type;
+using stage_list_t =
+    typename detail::paired_list<detail::StageUptr, Args...>::type;
 
 /**
  * @brief Executes the following transformation
@@ -72,8 +78,8 @@ struct buffer_list_impl<std::tuple<Args...>, std::index_sequence<Is...>>
 {
     using full_tuple_t = std::tuple<Args...>;
 
-    using type = std::tuple<
-        BufferQueue<std::tuple_element_t<2 * Is + 1, full_tuple_t>>...>;
+    using type = std::tuple<BufferQueue<
+        std::future<std::tuple_element_t<2 * Is + 1, full_tuple_t>>>...>;
 };
 
 template <class... Args> struct buffer_list

@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <deque>
 #include <mutex>
+#include <stdexcept>
 
 namespace yap
 {
@@ -14,6 +15,31 @@ enum class PopBehavior : uint8_t
     Frozen,       // Block all pop operations.
     ThrowOnEmpty, // Never block on pop, throws if popping from an empty queue.
     WaitOnEmpty   // Block until an element is available to pop.
+};
+
+namespace detail
+{
+
+/**
+ * @brief Used internally. User code is not allowed to throw this exception.
+ */
+struct EmptyInput : std::logic_error
+{
+    EmptyInput() : std::logic_error("EmptyInput")
+    {
+    }
+};
+
+} // namespace detail
+
+/**
+ * @brief Throw this exception to signal the end of available input.
+ */
+struct FinishedInput : std::logic_error
+{
+    FinishedInput() : std::logic_error("FinishedInput")
+    {
+    }
 };
 
 template <class T> class BufferQueue final
@@ -64,10 +90,16 @@ template <class T> class BufferQueue final
             }
         });
 
-        auto ret{std::move(_contents.at(0))};
-        _contents.pop_front();
-
-        return ret;
+        try
+        {
+            auto ret{std::move(_contents.at(0))};
+            _contents.pop_front();
+            return ret;
+        }
+        catch (std::out_of_range &e)
+        {
+            throw detail::EmptyInput{};
+        }
     }
 
     void setPop(PopBehavior val)

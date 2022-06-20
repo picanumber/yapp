@@ -5,12 +5,7 @@
 #include "stage.h"
 #include "type_utilities.h"
 
-#include <functional>
 #include <mutex>
-#include <optional>
-#include <tuple>
-#include <type_traits>
-#include <utility>
 
 namespace yap
 {
@@ -69,8 +64,9 @@ template <class F, class... Us>
 Pipeline<Ts...>::Pipeline(Pipeline<Us...> &&pl, F &&fun)
     : _stages(std::tuple_cat(
           std::move(pl._stages),
-          std::tuple<typename detail::last_type_impl<stages_t>::type>(
-              std::forward<F>(fun))))
+          std::make_tuple(
+              std::make_unique<typename detail::last_type_impl<
+                  stages_t>::type::element_type>(std::forward<F>(fun)))))
 {
 }
 
@@ -90,19 +86,19 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::run()
                     {
                         if constexpr (0 == I)
                         {
-                            std::get<0>(_stages).start(nullptr,
-                                                       &std::get<0>(_buffers));
+                            std::get<0>(_stages)->start(nullptr,
+                                                        &std::get<0>(_buffers));
                         }
                         else if constexpr (I == std::tuple_size_v<stages_t> - 1)
                         {
                             constexpr auto nBuffers =
                                 std::tuple_size_v<buffers_t>;
-                            std::get<I>(_stages).start(
+                            std::get<I>(_stages)->start(
                                 &std::get<nBuffers - 1>(_buffers), nullptr);
                         }
                         else
                         {
-                            std::get<I>(_stages).start(
+                            std::get<I>(_stages)->start(
                                 &std::get<I - 1>(_buffers),
                                 &std::get<I>(_buffers));
                         }
@@ -137,13 +133,20 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
     {
         if constexpr (std::tuple_size_v<buffers_t>)
         {
+            // Throw when attempting to pull from an empty queue. If a stage is
+            // currently waiting for its input queue to be non-empty, it will be
+            // woken-up and throw until it's notified that we don't want it to
+            // be alive anymore.
             std::apply(
                 [](auto &...args) {
                     (args.setPop(PopBehavior::ThrowOnEmpty), ...);
                 },
                 _buffers);
 
-            std::apply([](auto &...args) { (args.stop(), ...); }, _stages);
+            // Stop stage workers. By now, stages are pulling leftovers from
+            // their input queues or failing. As soon as they're stopped, their
+            // processing loop will exit.
+            std::apply([](auto &...args) { (args->stop(), ...); }, _stages);
         }
     }
 

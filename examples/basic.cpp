@@ -12,24 +12,42 @@ template <class F> void foo(F)
     std::cout << __PRETTY_FUNCTION__ << std::endl;
 }
 
+class NoCopy
+{
+    int _id;
+    static int classId;
+
+  public:
+    NoCopy() : _id(classId++)
+    {
+    }
+
+    NoCopy(NoCopy const &) = delete;
+    NoCopy &operator=(NoCopy const &) = delete;
+
+    NoCopy(NoCopy &&) = default;
+};
+
+int NoCopy::classId = 0;
+
 int main()
 {
     static auto generator = [val = 1]() mutable {
         std::cout << "Generating..\n";
         // std::this_thread::sleep_for(500ms);
-        return val++;
+        return NoCopy{};
     };
-    static auto transform = [](int arg) {
+    static auto transform = [](NoCopy arg) {
         std::cout << "Transform1\n";
         // std::this_thread::sleep_for(200ms);
-        return arg * 2.;
+        return arg;
     };
 
-    std::vector<double> output;
-    static auto sink = [&output](double arg) {
+    std::vector<NoCopy> output;
+    static auto sink = [&output](NoCopy arg) {
         std::cout << "Output...\n";
         // std::this_thread::sleep_for(500ms);
-        output.push_back(arg);
+        output.emplace_back(std::move(arg));
     };
 
     yap::Pipeline pipe0;
@@ -40,12 +58,8 @@ int main()
     pipe3.run();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-    return 0;
-    auto start = std::chrono::steady_clock::now();
-    while (true)
-    {
-        std::cout << "Half a second elapsed ........ \n";
-    }
+    pipe3.stop();
+    std::cout << "Stopping\n";
 
     return 0;
 }
