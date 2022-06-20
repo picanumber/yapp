@@ -2,9 +2,9 @@ name: Ubuntu
 
 on:
   push:
-    branches: [ master ]
+    branches: [ $default-branch ]
   pull_request:
-    branches: [ master ]
+    branches: [ $default-branch ]
 
 env:
   BUILD_TYPE: Release
@@ -17,7 +17,7 @@ jobs:
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       
     - name: cache dependencies
       uses: actions/cache@v2
@@ -44,7 +44,7 @@ jobs:
 
     - name: run tests
       run: |
-        cd build
+        cd build/test
         ctest -C $BUILD_TYPE -VV
 
     - name: Code coverage using Codecov 
