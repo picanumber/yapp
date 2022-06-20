@@ -1,0 +1,6 @@
+﻿---
+BasedOnStyle: Microsoft
+ColumnLimit: '80'
+SpacesInAngles: 'false'
+
+...
