@@ -28,5 +28,5 @@ SET(USED_LIBS
 add_compile_options(-Wall -Wextra -pedantic)
 
 add_subdirectory(examples)
-add_subdirectory(tests)
+add_subdirectory(test)
 
