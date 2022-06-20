@@ -71,29 +71,37 @@ template <class OUT> struct Function<void, OUT>
 template <class IN, class OUT>
 using function_t = typename Function<IN, OUT>::type;
 
-// Process a transformation stage.
+// Process a transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-void process(std::function<OUT(IN)> &op, BufferQueue<std::future<IN>> *input,
+bool process(std::function<OUT(IN)> &op, BufferQueue<std::future<IN>> *input,
              BufferQueue<std::future<OUT>> *output)
 {
     try
     {
         // expect not null input/output
         output->push(make_ready_future<OUT>(op(input->pop().get())));
+        return true;
     }
     catch (EmptyInput &e)
     {
         // The input queue doesn't want me to wait.
+        return true;
+    }
+    catch (FinishedInput &e)
+    {
+        output->push(make_exceptional_future<OUT>(FinishedInput{}));
+        return false;
     }
     catch (...)
     {
         // Op threw an exception. No point in propagating the data.
+        return true;
     }
 }
 
 // Process a generator stage.
 template <class OUT>
-void process(std::function<OUT()> &op,
+bool process(std::function<OUT()> &op,
              BufferQueue<std::future<void>> * /*input*/,
              BufferQueue<std::future<OUT>> *output)
 {
@@ -101,30 +109,44 @@ void process(std::function<OUT()> &op,
     {
         // expect null input, non null output.
         output->push(make_ready_future<OUT>(op()));
+        return true;
+    }
+    catch (FinishedInput &e)
+    {
+        output->push(make_exceptional_future<OUT>(FinishedInput{}));
+        return false;
     }
     catch (...)
     {
         // Op threw an exception. No point in propagating the data.
+        return true;
     }
 }
 
 // Process a sink stage.
 template <class IN>
-void process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
+bool process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
              BufferQueue<std::future<void>> * /*output*/)
 {
     try
     {
         // expect null output, non null input.
         op(input->pop().get());
+        return true;
     }
     catch (EmptyInput &e)
     {
         // The input queue doesn't want me to wait.
+        return true;
+    }
+    catch (FinishedInput &e)
+    {
+        return false;
     }
     catch (...)
     {
         // Op threw an exception. No point in propagating the data.
+        return true;
     }
 }
 
@@ -164,14 +186,24 @@ template <class IN, class OUT> class Stage
         }
     }
 
-    void stop()
+    auto stop()
+    {
+        return std::async([this] {
+            std::lock_guard lk(_cmdMtx);
+            if (_alive)
+            {
+                _alive = false;
+                _worker.join();
+            }
+        });
+    }
+
+    // Let the worker run, until it exits due to finished input message.
+    void consume()
     {
         std::lock_guard lk(_cmdMtx);
-        if (_alive)
-        {
-            _alive = false;
-            _worker.join();
-        }
+        _worker.join();
+        _alive = false;
     }
 
   private:
@@ -179,7 +211,13 @@ template <class IN, class OUT> class Stage
     {
         while (_alive)
         {
-            detail::process(_operation, _input, _output);
+            if (!detail::process(_operation, _input, _output))
+            {
+                // The worker is considered alive, since it's not joined. After
+                // such a bail-out, only "stop()" can be called upon the
+                // instance, or "consume()".
+                break;
+            }
         }
     }
 };

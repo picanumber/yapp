@@ -57,9 +57,10 @@ int main()
     yap::Pipeline pipe3(std::move(pipe2), sink);
     pipe3.run();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(5000));
-    pipe3.stop();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
     std::cout << "Stopping\n";
+    pipe3.stop();
+    std::cout << "Stopped\n";
 
     return 0;
 }

@@ -50,8 +50,6 @@ template <class T> class BufferQueue final
     std::atomic<PopBehavior> _popCondition{PopBehavior::WaitOnEmpty};
 
   public:
-    // TODO: Check if dtor would be useful.
-
     void clear()
     {
         {

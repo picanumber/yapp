@@ -33,7 +33,6 @@ template <class... Ts> class Pipeline : public pipeline
     {
         Idle,
         Running,
-        Stopped,
         Paused
     };
 
@@ -75,7 +74,7 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::run()
     auto ret = ReturnValue::NoOp;
     std::lock_guard lk(_cmdMtx);
 
-    if (State::Idle == _state || State::Stopped == _state)
+    if (State::Idle == _state)
     {
         auto startStages = [this]<std::size_t... Is>(std::index_sequence<Is...>)
         {
@@ -129,26 +128,41 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
     auto ret = ReturnValue::NoOp;
     std::lock_guard lk(_cmdMtx);
 
-    if (_state == State::Running)
+    if (State::Running == _state)
     {
         if constexpr (std::tuple_size_v<buffers_t>)
         {
-            // Throw when attempting to pull from an empty queue. If a stage is
-            // currently waiting for its input queue to be non-empty, it will be
-            // woken-up and throw until it's notified that we don't want it to
-            // be alive anymore.
+            // Stop stage workers. A stage pulling from an empty input freezes.
+            auto stoppers = std::apply(
+                [](auto &...args) { return std::array{args->stop()...}; },
+                _stages);
+
+            // Buffers will throw when attempting to pull from an empty queue.
+            // Waiting stages wake up and realize they have to die.
             std::apply(
                 [](auto &...args) {
                     (args.setPop(PopBehavior::ThrowOnEmpty), ...);
                 },
                 _buffers);
 
-            // Stop stage workers. By now, stages are pulling leftovers from
-            // their input queues or failing. As soon as they're stopped, their
-            // processing loop will exit.
-            std::apply([](auto &...args) { (args->stop(), ...); }, _stages);
+            for (auto &stop : stoppers)
+            {
+                stop.get(); // Wait for stoppers to complete.
+            }
+
+            _state = State::Idle;
+            ret = ReturnValue::Ok;
         }
     }
+    else if (State::Paused == _state)
+    {
+        // TODO: Implement
+
+        _state = State::Idle;
+        ret = ReturnValue::Ok;
+    }
+
+    // TODO: Empty buffers .
 
     return ret;
 }
@@ -158,8 +172,12 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::pause()
     auto ret = ReturnValue::NoOp;
     std::lock_guard lk(_cmdMtx);
 
-    if (_state != State::Paused)
+    if (_state == State::Running)
     {
+        // TODO
+
+        _state = State::Paused;
+        ret = ReturnValue::Ok;
     }
 
     return ret;
