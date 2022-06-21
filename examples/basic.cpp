@@ -9,7 +9,9 @@ using namespace std::chrono_literals;
 
 template <class F> void foo(F)
 {
+#ifndef _WIN32
     std::cout << __PRETTY_FUNCTION__ << std::endl;
+#endif
 }
 
 class NoCopy
