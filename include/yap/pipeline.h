@@ -197,4 +197,3 @@ Pipeline(Pipeline<Ts...> &&, F &&fun)
                     std::invoke_result<F>>::type>;
 
 } // namespace yap
-
