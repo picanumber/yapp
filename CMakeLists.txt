@@ -25,7 +25,10 @@ SET(USED_LIBS
 #    source/DsCommon.cpp
 #)
 
-add_compile_options(-Wall -Wextra -pedantic)
+if (WIN32)
+else()
+    add_compile_options(-Wall -Wextra -pedantic)
+endif()
 
 add_subdirectory(examples)
 add_subdirectory(test)
