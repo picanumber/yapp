@@ -82,14 +82,8 @@ bool process(std::function<OUT(IN)> &op, BufferQueue<std::future<IN>> *input,
         output->push(make_ready_future<OUT>(op(input->pop().get())));
         return true;
     }
-    catch (EmptyInput &e)
+    catch (ClosedError &e)
     {
-        // The input queue doesn't want me to wait.
-        return true;
-    }
-    catch (FinishedInput &e)
-    {
-        output->push(make_exceptional_future<OUT>(FinishedInput{}));
         return false;
     }
     catch (...)
@@ -111,9 +105,8 @@ bool process(std::function<OUT()> &op,
         output->push(make_ready_future<OUT>(op()));
         return true;
     }
-    catch (FinishedInput &e)
+    catch (ClosedError &e)
     {
-        output->push(make_exceptional_future<OUT>(FinishedInput{}));
         return false;
     }
     catch (...)
@@ -134,12 +127,7 @@ bool process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
         op(input->pop().get());
         return true;
     }
-    catch (EmptyInput &e)
-    {
-        // The input queue doesn't want me to wait.
-        return true;
-    }
-    catch (FinishedInput &e)
+    catch (ClosedError &e)
     {
         return false;
     }
@@ -198,7 +186,7 @@ template <class IN, class OUT> class Stage
         });
     }
 
-    // Let the worker run, until it exits due to finished input message.
+    // Let the worker run, until it exits due to ClosedBuffer error.
     void consume()
     {
         std::lock_guard lk(_cmdMtx);

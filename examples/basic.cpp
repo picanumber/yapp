@@ -7,13 +7,6 @@
 
 using namespace std::chrono_literals;
 
-template <class F> void foo(F)
-{
-#ifndef _WIN32
-    std::cout << __PRETTY_FUNCTION__ << std::endl;
-#endif
-}
-
 class NoCopy
 {
     int _id;
@@ -59,7 +52,16 @@ int main()
     yap::Pipeline pipe3(std::move(pipe2), sink);
     pipe3.run();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(1'000));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::cout << "Pausing\n";
+    pipe3.pause();
+    std::cout << "Paused\n";
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::cout << "Resuming\n";
+    pipe3.run();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "Stopping\n";
     pipe3.stop();
     std::cout << "Stopped\n";

@@ -114,7 +114,9 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::run()
     }
     else if (State::Paused == _state)
     {
-        // TODO: unfreeze buffers
+        std::apply(
+            [](auto &...args) { (args.set(BufferBehavior::WaitOnEmpty), ...); },
+            _buffers);
 
         _state = State::Running;
         ret = ReturnValue::Ok;
@@ -128,41 +130,24 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
     auto ret = ReturnValue::NoOp;
     std::lock_guard lk(_cmdMtx);
 
-    if (State::Running == _state)
+    if (State::Running == _state || State::Paused == _state)
     {
         if constexpr (std::tuple_size_v<buffers_t>)
         {
-            // Stop stage workers. A stage pulling from an empty input freezes.
             auto stoppers = std::apply(
                 [](auto &...args) { return std::array{args->stop()...}; },
                 _stages);
 
-            // Buffers will throw when attempting to pull from an empty queue.
-            // Waiting stages wake up and realize they have to die.
             std::apply(
-                [](auto &...args) {
-                    (args.setPop(PopBehavior::ThrowOnEmpty), ...);
-                },
+                [](auto &...args) { (args.set(BufferBehavior::Closed), ...); },
                 _buffers);
-
-            for (auto &stop : stoppers)
-            {
-                stop.get(); // Wait for stoppers to complete.
-            }
 
             _state = State::Idle;
             ret = ReturnValue::Ok;
         }
-    }
-    else if (State::Paused == _state)
-    {
-        // TODO: Implement
 
-        _state = State::Idle;
-        ret = ReturnValue::Ok;
+        std::apply([](auto &...args) { (args.clear(), ...); }, _buffers);
     }
-
-    // TODO: Empty buffers .
 
     return ret;
 }
@@ -174,7 +159,9 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::pause()
 
     if (_state == State::Running)
     {
-        // TODO
+        std::apply(
+            [](auto &...args) { (args.set(BufferBehavior::Frozen), ...); },
+            _buffers);
 
         _state = State::Paused;
         ret = ReturnValue::Ok;
