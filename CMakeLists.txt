@@ -1,8 +1,15 @@
-project(yet-another-pipeline)
+set(CMAKE_PROJECT_VERSION "1")
+set(CMAKE_PROJECT_VERSION_MAJOR "1")
+set(CMAKE_PROJECT_VERSION_MINOR "1")
+set(CMAKE_PROJECT_VERSION_PATCH "1")
+set(CMAKE_VERSION_STRING "${CMAKE_PROJECT_VERSION_MAJOR}.${CMAKE_PROJECT_VERSION_MINOR}.${CMAKE_PROJECT_VERSION_PATCH}")
+
+cmake_policy(SET CMP0048 NEW)
+project(yet-another-pipeline VERSION "${LIB_VERSION_STRING}" LANGUAGES CXX)
  
 cmake_minimum_required(VERSION 3.16)
 
-set (CMAKE_CXX_STANDARD 20) 
+set(CMAKE_CXX_STANDARD 20) 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) 
 
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/finders)
@@ -17,13 +24,6 @@ find_package(Threads REQUIRED)
 SET(USED_LIBS
     Threads::Threads
 )
-
-#SET(YAP_SOURCES
-#    source/RemoteMemory.cpp
-#    source/LoopbackMemory.cpp
-#    source/RemUtilities.cpp
-#    source/DsCommon.cpp
-#)
 
 if (WIN32)
 else()
