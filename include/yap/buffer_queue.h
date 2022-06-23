@@ -17,14 +17,29 @@ enum class BufferBehavior : uint8_t
     Closed       // No IO can be performed on the buffer.
 };
 
+namespace detail
+{
+
 /**
- * @brief Throw this exception if IO is attempted on a closed buffer.
+ * @brief Internally thrown when IO is attempted on a closed buffer.
  */
 struct ClosedError : std::logic_error
 {
     explicit ClosedError(bool onPop)
         : std::logic_error(onPop ? "No data can be popped from the buffer"
                                  : "No data can be pushed to the buffer")
+    {
+    }
+};
+
+} // namespace detail
+
+/**
+ * @brief Raised when a generator or coroutine is closed.
+ */
+struct GeneratorExit : std::logic_error
+{
+    GeneratorExit() : std::logic_error("GeneratorExit")
     {
     }
 };
@@ -55,7 +70,7 @@ template <class T> class BufferQueue final
 
             if (BufferBehavior::Closed == _popCondition)
             {
-                throw ClosedError(false);
+                throw detail::ClosedError(false);
             }
 
             _contents.emplace_back(std::forward<Args>(args)...);
@@ -81,7 +96,7 @@ template <class T> class BufferQueue final
 
         if (BufferBehavior::Closed == _popCondition)
         {
-            throw ClosedError(true);
+            throw detail::ClosedError(true);
         }
 
         auto ret{std::move(_contents.at(0))};

@@ -82,8 +82,13 @@ bool process(std::function<OUT(IN)> &op, BufferQueue<std::future<IN>> *input,
         output->push(make_ready_future<OUT>(op(input->pop().get())));
         return true;
     }
-    catch (ClosedError &e)
+    catch (detail::ClosedError &e)
     {
+        return false;
+    }
+    catch (GeneratorExit &e)
+    {
+        output->push(make_exceptional_future<OUT>(e));
         return false;
     }
     catch (...)
@@ -105,8 +110,13 @@ bool process(std::function<OUT()> &op,
         output->push(make_ready_future<OUT>(op()));
         return true;
     }
-    catch (ClosedError &e)
+    catch (detail::ClosedError &e)
     {
+        return false;
+    }
+    catch (GeneratorExit &e)
+    {
+        output->push(make_exceptional_future<OUT>(e));
         return false;
     }
     catch (...)
@@ -127,7 +137,11 @@ bool process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
         op(input->pop().get());
         return true;
     }
-    catch (ClosedError &e)
+    catch (detail::ClosedError &e)
+    {
+        return false;
+    }
+    catch (GeneratorExit &e)
     {
         return false;
     }
@@ -201,9 +215,6 @@ template <class IN, class OUT> class Stage
         {
             if (!detail::process(_operation, _input, _output))
             {
-                // The worker is considered alive, since it's not joined. After
-                // such a bail-out, only "stop()" can be called upon the
-                // instance, or "consume()".
                 break;
             }
         }
