@@ -5,6 +5,7 @@
 #include "stage.h"
 #include "type_utilities.h"
 
+#include <memory>
 #include <mutex>
 
 namespace yap
@@ -25,8 +26,15 @@ class pipeline
     virtual ReturnValue run() = 0;
     virtual ReturnValue stop() = 0;
     virtual ReturnValue pause() = 0;
+    virtual ReturnValue consume() = 0;
 };
 
+/**
+ * @brief Parallel data processing pipeline with one thread per stage.
+ *
+ * @tparam Ts The <IN,OUT> type transformations imposed on every stage of the
+ * pipeline.
+ */
 template <class... Ts> class Pipeline : public pipeline
 {
     enum class State
@@ -43,9 +51,12 @@ template <class... Ts> class Pipeline : public pipeline
     ReturnValue run() override;
     ReturnValue stop() override;
     ReturnValue pause() override;
+    ReturnValue consume() override;
 
   private:
     template <class...> friend class Pipeline;
+
+    ReturnValue runImpl();
 
   private:
     using buffers_t = buffer_list_t<Ts...>;
@@ -54,7 +65,9 @@ template <class... Ts> class Pipeline : public pipeline
     buffers_t _buffers;
     stages_t _stages;
 
-    mutable std::mutex _cmdMtx;
+    // TODO: Put all of the state (buffers states etc) in a state struct.
+    mutable std::unique_ptr<std::mutex> _cmdMtx =
+        std::make_unique<std::mutex>();
     State _state{State::Idle};
 };
 
@@ -69,10 +82,9 @@ Pipeline<Ts...>::Pipeline(Pipeline<Us...> &&pl, F &&fun)
 {
 }
 
-template <class... Ts> ReturnValue Pipeline<Ts...>::run()
+template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
 {
     auto ret = ReturnValue::NoOp;
-    std::lock_guard lk(_cmdMtx);
 
     if (State::Idle == _state)
     {
@@ -125,10 +137,16 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::run()
     return ret;
 }
 
+template <class... Ts> ReturnValue Pipeline<Ts...>::run()
+{
+    std::lock_guard lk(*_cmdMtx);
+    return runImpl();
+}
+
 template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
 {
     auto ret = ReturnValue::NoOp;
-    std::lock_guard lk(_cmdMtx);
+    std::lock_guard lk(*_cmdMtx);
 
     if (State::Running == _state || State::Paused == _state)
     {
@@ -155,7 +173,7 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
 template <class... Ts> ReturnValue Pipeline<Ts...>::pause()
 {
     auto ret = ReturnValue::NoOp;
-    std::lock_guard lk(_cmdMtx);
+    std::lock_guard lk(*_cmdMtx);
 
     if (_state == State::Running)
     {
@@ -164,6 +182,30 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::pause()
             _buffers);
 
         _state = State::Paused;
+        ret = ReturnValue::Ok;
+    }
+
+    return ret;
+}
+
+template <class... Ts> ReturnValue Pipeline<Ts...>::consume()
+{
+    auto ret = ReturnValue::NoOp;
+    std::lock_guard lk(*_cmdMtx);
+
+    if (State::Running != _state)
+    {
+        ret = runImpl();
+    }
+    else
+    {
+        ret = ReturnValue::Ok;
+    }
+
+    if (ReturnValue::Ok == ret)
+    {
+        std::apply([](auto &...args) { (args->consume(), ...); }, _stages);
+        _state = State::Idle;
         ret = ReturnValue::Ok;
     }
 
@@ -182,5 +224,20 @@ Pipeline(Pipeline<Ts...> &&, F &&fun)
                 typename std::conditional_t<
                     sizeof...(Ts), std::invoke_result<F, last_type_t<Ts...>>,
                     std::invoke_result<F>>::type>;
+
+// Chaining operator.
+template <class... Ts, class F>
+auto operator|(Pipeline<Ts...> &&pl, F &&transform)
+{
+    return Pipeline(std::move(pl), std::forward<F>(transform));
+}
+
+// Abstract base class creator.
+template <class... Fs>
+std::unique_ptr<pipeline> make_pipeline(Fs &&...transforms)
+{
+    using pipeline_t = decltype((Pipeline{} | ... | transforms));
+    return std::make_unique<pipeline_t>((Pipeline{} | ... | transforms));
+}
 
 } // namespace yap

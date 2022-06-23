@@ -204,8 +204,11 @@ template <class IN, class OUT> class Stage
     void consume()
     {
         std::lock_guard lk(_cmdMtx);
-        _worker.join();
-        _alive = false;
+        if (_alive)
+        {
+            _worker.join();
+            _alive = false;
+        }
     }
 
   private:
