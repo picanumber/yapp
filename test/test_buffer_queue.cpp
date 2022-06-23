@@ -4,6 +4,7 @@
 
 TEST(TestBufferQueue, BasicAssertions)
 {
+    double *var = new double;
     // Expect two strings not to be equal.
     EXPECT_STRNE("hello", "world");
     // Expect equality.
