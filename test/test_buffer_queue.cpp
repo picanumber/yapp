@@ -104,4 +104,3 @@ TEST(TestBufferQueue, CheckFrozen)
     buf.set(yap::BufferBehavior::WaitOnEmpty);
     EXPECT_EQ(value, try_pop.get());
 }
-
