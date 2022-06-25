@@ -47,6 +47,7 @@ template <class... Ts> class Pipeline : public pipeline
   public:
     Pipeline() = default;
     template <class F, class... Us> Pipeline(Pipeline<Us...> &&pl, F &&fun);
+    Pipeline(Pipeline<Ts...> &&other);
 
     ReturnValue run() override;
     ReturnValue stop() override;
@@ -65,9 +66,7 @@ template <class... Ts> class Pipeline : public pipeline
     buffers_t _buffers;
     stages_t _stages;
 
-    // TODO: Put all of the state (buffers states etc) in a state struct.
-    mutable std::unique_ptr<std::mutex> _cmdMtx =
-        std::make_unique<std::mutex>();
+    mutable std::mutex _cmdMtx;
     State _state{State::Idle};
 };
 
@@ -80,6 +79,23 @@ Pipeline<Ts...>::Pipeline(Pipeline<Us...> &&pl, F &&fun)
               std::make_unique<typename detail::last_type_impl<
                   stages_t>::type::element_type>(std::forward<F>(fun)))))
 {
+    if constexpr (std::tuple_size_v<buffers_t>)
+    {
+        _buffers = std::tuple_cat(
+            std::move(pl._buffers),
+            std::make_tuple(std::make_shared<typename detail::last_type_impl<
+                                buffers_t>::type::element_type>()));
+    }
+}
+
+template <class... Ts> Pipeline<Ts...>::Pipeline(Pipeline<Ts...> &&other)
+{
+    std::lock_guard lock(other._cmdMtx);
+
+    _buffers.swap(other._buffers);
+    _stages.swap(other._stages);
+
+    _state = other._state;
 }
 
 template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
@@ -98,20 +114,20 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
                         if constexpr (0 == I)
                         {
                             std::get<0>(_stages)->start(nullptr,
-                                                        &std::get<0>(_buffers));
+                                                        std::get<0>(_buffers));
                         }
                         else if constexpr (I == std::tuple_size_v<stages_t> - 1)
                         {
                             constexpr auto nBuffers =
                                 std::tuple_size_v<buffers_t>;
                             std::get<I>(_stages)->start(
-                                &std::get<nBuffers - 1>(_buffers), nullptr);
+                                std::get<nBuffers - 1>(_buffers), nullptr);
                         }
                         else
                         {
                             std::get<I>(_stages)->start(
-                                &std::get<I - 1>(_buffers),
-                                &std::get<I>(_buffers));
+                                std::get<I - 1>(_buffers),
+                                std::get<I>(_buffers));
                         }
                     }
                 };
@@ -127,7 +143,9 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
     else if (State::Paused == _state)
     {
         std::apply(
-            [](auto &...args) { (args.set(BufferBehavior::WaitOnEmpty), ...); },
+            [](auto &...args) {
+                (args->set(BufferBehavior::WaitOnEmpty), ...);
+            },
             _buffers);
 
         _state = State::Running;
@@ -139,14 +157,14 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
 
 template <class... Ts> ReturnValue Pipeline<Ts...>::run()
 {
-    std::lock_guard lk(*_cmdMtx);
+    std::lock_guard lk(_cmdMtx);
     return runImpl();
 }
 
 template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
 {
     auto ret = ReturnValue::NoOp;
-    std::lock_guard lk(*_cmdMtx);
+    std::lock_guard lk(_cmdMtx);
 
     if (State::Running == _state || State::Paused == _state)
     {
@@ -157,14 +175,14 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
                 _stages);
 
             std::apply(
-                [](auto &...args) { (args.set(BufferBehavior::Closed), ...); },
+                [](auto &...args) { (args->set(BufferBehavior::Closed), ...); },
                 _buffers);
 
             _state = State::Idle;
             ret = ReturnValue::Ok;
         }
 
-        std::apply([](auto &...args) { (args.clear(), ...); }, _buffers);
+        std::apply([](auto &...args) { (args->clear(), ...); }, _buffers);
     }
 
     return ret;
@@ -173,12 +191,12 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
 template <class... Ts> ReturnValue Pipeline<Ts...>::pause()
 {
     auto ret = ReturnValue::NoOp;
-    std::lock_guard lk(*_cmdMtx);
+    std::lock_guard lk(_cmdMtx);
 
     if (_state == State::Running)
     {
         std::apply(
-            [](auto &...args) { (args.set(BufferBehavior::Frozen), ...); },
+            [](auto &...args) { (args->set(BufferBehavior::Frozen), ...); },
             _buffers);
 
         _state = State::Paused;
@@ -191,7 +209,7 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::pause()
 template <class... Ts> ReturnValue Pipeline<Ts...>::consume()
 {
     auto ret = ReturnValue::NoOp;
-    std::lock_guard lk(*_cmdMtx);
+    std::lock_guard lk(_cmdMtx);
 
     if (State::Running != _state)
     {

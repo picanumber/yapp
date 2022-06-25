@@ -6,6 +6,7 @@
 #include <atomic>
 #include <functional>
 #include <future>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <thread>
@@ -73,8 +74,9 @@ using function_t = typename Function<IN, OUT>::type;
 
 // Process a transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-bool process(std::function<OUT(IN)> &op, BufferQueue<std::future<IN>> *input,
-             BufferQueue<std::future<OUT>> *output)
+bool process(std::function<OUT(IN)> &op,
+             std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+             std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
     try
     {
@@ -101,8 +103,8 @@ bool process(std::function<OUT(IN)> &op, BufferQueue<std::future<IN>> *input,
 // Process a generator stage.
 template <class OUT>
 bool process(std::function<OUT()> &op,
-             BufferQueue<std::future<void>> * /*input*/,
-             BufferQueue<std::future<OUT>> *output)
+             std::shared_ptr<BufferQueue<std::future<void>>> & /*input*/,
+             std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
     try
     {
@@ -128,8 +130,10 @@ bool process(std::function<OUT()> &op,
 
 // Process a sink stage.
 template <class IN>
-bool process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
-             BufferQueue<std::future<void>> * /*output*/)
+bool process(std::function<void(IN)> &op,
+             std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+             std::shared_ptr<BufferQueue<std::future<void>>> &
+             /*output*/)
 {
     try
     {
@@ -157,9 +161,8 @@ bool process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
 template <class IN, class OUT> class Stage
 {
     detail::function_t<IN, OUT> _operation;
-    // TODO(picanumber): These should be shared pointers.
-    BufferQueue<std::future<IN>> *_input = nullptr;
-    BufferQueue<std::future<OUT>> *_output = nullptr;
+    std::shared_ptr<BufferQueue<std::future<IN>>> _input;
+    std::shared_ptr<BufferQueue<std::future<OUT>>> _output;
     std::thread _worker;
     std::mutex _cmdMtx;
     std::atomic_bool _alive{false};
@@ -175,14 +178,14 @@ template <class IN, class OUT> class Stage
         stop();
     }
 
-    void start(BufferQueue<std::future<IN>> *input,
-               BufferQueue<std::future<OUT>> *output)
+    void start(std::shared_ptr<BufferQueue<std::future<IN>>> input,
+               std::shared_ptr<BufferQueue<std::future<OUT>>> output)
     {
         std::lock_guard lk(_cmdMtx);
         if (!_alive)
         {
-            _input = input;
-            _output = output;
+            _input = std::move(input);
+            _output = std::move(output);
 
             _alive = true;
             _worker = std::thread(&Stage::process, this);

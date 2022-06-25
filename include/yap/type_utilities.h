@@ -45,7 +45,7 @@ template <class T1, class T2> using StageUptr = std::unique_ptr<Stage<T1, T2>>;
 /**
  * @brief Executes the following transformation
  *
- * T1,T2,T3,T4 -> tuple<Stage<T1,T2>, Stage<T3,T4>>
+ * T1,T2,T3,T4 -> tuple<unique_ptr<Stage<T1,T2>>, unique_ptr<Stage<T3,T4>>>
  *
  * for even input type-lists.
  *
@@ -54,19 +54,6 @@ template <class T1, class T2> using StageUptr = std::unique_ptr<Stage<T1, T2>>;
 template <class... Args>
 using stage_list_t =
     typename detail::paired_list<detail::StageUptr, Args...>::type;
-
-/**
- * @brief Executes the following transformation
- *
- * T1,T2,T3,T4 -> tuple<Stage<T1,T2>, Stage<T3,T4>>
- *
- * for even input type-lists.
- *
- * @tparam Args The type-list to transform.
- */
-template <class... Args>
-using function_list_t =
-    typename detail::paired_list<detail::function_t, Args...>::type;
 
 namespace detail
 {
@@ -78,8 +65,8 @@ struct buffer_list_impl<std::tuple<Args...>, std::index_sequence<Is...>>
 {
     using full_tuple_t = std::tuple<Args...>;
 
-    using type = std::tuple<BufferQueue<
-        std::future<std::tuple_element_t<2 * Is + 1, full_tuple_t>>>...>;
+    using type = std::tuple<std::shared_ptr<BufferQueue<
+        std::future<std::tuple_element_t<2 * Is + 1, full_tuple_t>>>>...>;
 };
 
 template <class... Args> struct buffer_list
@@ -101,7 +88,8 @@ template <> struct buffer_list<>
 /**
  * @brief Executes the following transformation
  *
- * T0,T1,T1,T2,T2,T3 -> tuple<BufferQueue<T1>, BufferQueue<T2>>
+ * T0,T1,T1,T2,T2,T3 -> tuple<shared_ptr<BufferQueue<T1>>,
+ * shared_ptr<BufferQueue<T2>>>
  *
  * for even input type-lists.
  *
