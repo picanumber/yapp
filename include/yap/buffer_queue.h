@@ -46,76 +46,71 @@ struct GeneratorExit : std::logic_error
 
 template <class T> class BufferQueue final
 {
-    struct State
-    {
-        std::deque<T> contents;
-        mutable std::mutex mtx;
-        mutable std::condition_variable bell;
-        std::atomic<BufferBehavior> popCondition{BufferBehavior::WaitOnEmpty};
-    };
-    std::unique_ptr<State> _state = std::make_unique<State>();
+    std::deque<T> _contents;
+    mutable std::mutex _mtx;
+    mutable std::condition_variable _bell;
+    std::atomic<BufferBehavior> _popCondition{BufferBehavior::WaitOnEmpty};
 
   public:
     void clear()
     {
         {
-            std::lock_guard lk(_state->mtx);
-            _state->contents.clear();
+            std::lock_guard lk(_mtx);
+            _contents.clear();
         }
-        _state->bell.notify_all();
+        _bell.notify_all();
     }
 
     template <class... Args> void push(Args &&...args)
     {
         {
-            std::unique_lock lk(_state->mtx);
-            _state->bell.wait(lk, [this] {
-                return _state->popCondition != BufferBehavior::Frozen;
-            });
+            std::unique_lock lk(_mtx);
+            _bell.wait(
+                lk, [this] { return _popCondition != BufferBehavior::Frozen; });
 
-            if (BufferBehavior::Closed == _state->popCondition)
+            if (BufferBehavior::Closed == _popCondition)
             {
                 throw detail::ClosedError(false);
             }
 
-            _state->contents.emplace_back(std::forward<Args>(args)...);
+            _contents.emplace_back(std::forward<Args>(args)...);
         }
-        _state->bell.notify_all();
+        _bell.notify_all();
     }
 
     auto pop()
     {
-        std::unique_lock lk(_state->mtx);
-        _state->bell.wait(lk, [this] {
-            switch (_state->popCondition)
+        std::unique_lock lk(_mtx);
+        _bell.wait(lk, [this] {
+            switch (_popCondition)
             {
             case BufferBehavior::Closed:
                 return true;
             case BufferBehavior::WaitOnEmpty:
-                return !_state->contents.empty();
+                return !_contents.empty();
             case BufferBehavior::Frozen:
             default: // TODO: expects here.
                 return false;
             }
         });
 
-        if (BufferBehavior::Closed == _state->popCondition)
+        if (BufferBehavior::Closed == _popCondition)
         {
             throw detail::ClosedError(true);
         }
 
-        auto ret{std::move(_state->contents.at(0))};
-        _state->contents.pop_front();
+        auto ret{std::move(_contents.at(0))};
+        _contents.pop_front();
         return ret;
     }
 
     void set(BufferBehavior val)
     {
         {
-            std::lock_guard lk(_state->mtx);
-            _state->popCondition.store(val);
+            std::lock_guard lk(_mtx);
+            _popCondition.store(val);
         }
-        _state->bell.notify_all();
+        _bell.notify_all();
     }
 };
 

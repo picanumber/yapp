@@ -74,9 +74,10 @@ TEST(TestPipeline, Consume)
     std::iota(expected.begin(), expected.end(), 1);
     result.reserve(nSize);
 
-    // auto pl = yap::Pipeline{} | gen | doubler | halfer | Sink(result);
-    auto pp = yap::make_pipeline(gen, doubler, halfer, Sink(result));
-    pp->consume();
+    auto pl = yap::Pipeline{} | gen | doubler | halfer | Sink(result);
+    pl.consume();
+    // auto pp = yap::make_pipeline(gen, doubler, halfer, Sink(result));
+    // pp->consume();
 
     EXPECT_EQ(result.size(), expected.size());
     EXPECT_TRUE(result == expected);

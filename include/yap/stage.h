@@ -157,6 +157,7 @@ bool process(std::function<void(IN)> &op, BufferQueue<std::future<IN>> *input,
 template <class IN, class OUT> class Stage
 {
     detail::function_t<IN, OUT> _operation;
+    // TODO(picanumber): These should be shared pointers.
     BufferQueue<std::future<IN>> *_input = nullptr;
     BufferQueue<std::future<OUT>> *_output = nullptr;
     std::thread _worker;
