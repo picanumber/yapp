@@ -14,7 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake/finders)
 
-set(YAP_INTERNAL_HEADERS
+set(YAP_INTERNAL_INCLUDE_DIRECTORY
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
@@ -32,4 +32,23 @@ endif()
 
 add_subdirectory(examples)
 add_subdirectory(test)
+
+#function(cat IN_FILE OUT_FILE)
+    #message("printing...${IN_FILE}")
+  #file(READ ${IN_FILE} CONTENTS)
+  #file(APPEND ${OUT_FILE} "${CONTENTS}")
+#endfunction()
+
+# Prepare a temporary file to "cat" to:
+#file(WRITE somefile.sql.in "")
+
+## Call the "cat" function for each input file
+#foreach(PACKAGE_SQL_FILE ${YAP_INTERNAL_HEADERS}/yap/)
+#  cat(${PACKAGE_SQL_FILE} somefile.sql.in)
+#endforeach()
+#
+## Copy the temporary file to the final location
+#configure_file(somefile.sql.in somefile.sql COPYONLY)
+#
+#file(REMOVE somefile.sql.in)
 
