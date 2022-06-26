@@ -52,6 +52,10 @@ template <class T> class BufferQueue final
     std::atomic<BufferBehavior> _popCondition{BufferBehavior::WaitOnEmpty};
 
   public:
+    // TODO(picanumber): Consider a dtor setting behavior to closed. The reason
+    // for not having one is that threads depending on the dtor to set a
+    // behavior will anyway depend on a dead object, so the dangling reference
+    // is the problematic state, not the waiting.
     void clear()
     {
         {

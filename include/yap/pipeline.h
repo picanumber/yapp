@@ -49,6 +49,8 @@ template <class... Ts> class Pipeline : public pipeline
     template <class F, class... Us> Pipeline(Pipeline<Us...> &&pl, F &&fun);
     Pipeline(Pipeline<Ts...> &&other);
 
+    ~Pipeline();
+
     ReturnValue run() override;
     ReturnValue stop() override;
     ReturnValue pause() override;
@@ -96,6 +98,11 @@ template <class... Ts> Pipeline<Ts...>::Pipeline(Pipeline<Ts...> &&other)
     _stages.swap(other._stages);
 
     _state = other._state;
+}
+
+template <class... Ts> Pipeline<Ts...>::~Pipeline()
+{
+    stop();
 }
 
 template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()

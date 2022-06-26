@@ -1,6 +1,5 @@
 #include "test_common.h"
 #include "yap/buffer_queue.h"
-#include "yap/pipeline.h"
 
 #include <gtest/gtest.h>
 

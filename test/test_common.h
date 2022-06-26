@@ -2,6 +2,7 @@
 #pragma once
 
 #include <chrono>
+#include <concepts>
 #include <utility>
 
 using namespace std::chrono_literals;
@@ -34,5 +35,45 @@ template <class T> class MoveOnly
         return _value;
     }
 };
+
+template <std::integral I> class Iota
+{
+    I _val;
+
+  public:
+    explicit Iota(I val) : _val(val)
+    {
+    }
+
+    I operator()()
+    {
+        return _val++;
+    }
+};
+
+bool is_humble(std::integral auto i)
+{
+    if (i <= 1)
+    {
+        return true;
+    }
+    if (i % 2 == 0)
+    {
+        return is_humble(i / 2);
+    }
+    if (i % 3 == 0)
+    {
+        return is_humble(i / 3);
+    }
+    if (i % 5 == 0)
+    {
+        return is_humble(i / 5);
+    }
+    if (i % 7 == 0)
+    {
+        return is_humble(i / 7);
+    }
+    return false;
+}
 
 } // namespace tcn
