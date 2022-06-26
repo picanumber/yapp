@@ -26,7 +26,8 @@ TEST(TestBufferQueue, CheckFifoBehavior)
             break;
         }
     }
-    fill.get();
+
+    EXPECT_NO_THROW(fill.get());
 }
 
 TEST(TestBufferQueue, CheckClose)
@@ -36,31 +37,11 @@ TEST(TestBufferQueue, CheckClose)
     buffer_t buf;
     buf.set(yap::BufferBehavior::Closed);
 
-    try
-    {
-        buf.push(1);
-        FAIL() << "Pushing to a closed buffer should throw";
-    }
-    catch (yap::detail::ClosedError &e)
-    {
-    }
-    catch (...)
-    {
-        FAIL() << "Incorrect exception emitted";
-    }
+    EXPECT_THROW(buf.push(1), yap::detail::ClosedError)
+        << "Pushing to a closed buffer should throw";
 
-    try
-    {
-        buf.pop();
-        FAIL() << "Popping from a closed buffer should throw";
-    }
-    catch (yap::detail::ClosedError &e)
-    {
-    }
-    catch (...)
-    {
-        FAIL() << "Incorrect exception emitted";
-    }
+    EXPECT_THROW(buf.pop(), yap::detail::ClosedError)
+        << "Popping from a closed buffer should throw";
 
     buf.set(yap::BufferBehavior::WaitOnEmpty);
     buf.push(1);

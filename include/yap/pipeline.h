@@ -53,6 +53,9 @@ template <class... Ts> class Pipeline : public pipeline
 
     ReturnValue run() override;
     ReturnValue stop() override;
+    // TODO(picanumber): Consider pause to behave identically to stop, only the
+    // buffers are not cleared. Probably removes the need for "freeze" behavior
+    // in buffers.
     ReturnValue pause() override;
     ReturnValue consume() override;
 

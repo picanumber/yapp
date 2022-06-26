@@ -1,10 +1,10 @@
 #include "test_common.h"
-#include "yap/buffer_queue.h"
 #include "yap/stage.h"
 
 #include <gtest/gtest.h>
 
 #include <future>
+#include <utility>
 #include <vector>
 
 TEST(TestStage, CheckGenerator)
@@ -30,18 +30,9 @@ TEST(TestStage, CheckGenerator)
     }
 
     generatorStage.consume();
+
     // Queue should contain the "exit" exception.
-    try
-    {
-        outQ->pop().get();
-    }
-    catch (yap::GeneratorExit &e)
-    {
-    }
-    catch (...)
-    {
-        FAIL() << "Wrong exception emitted";
-    }
+    EXPECT_THROW(outQ->pop().get(), yap::GeneratorExit);
 
     // Should block since queue is and will remain empty.
     auto try_pop = std::async([&] { return outQ->pop(); });
@@ -49,26 +40,10 @@ TEST(TestStage, CheckGenerator)
     EXPECT_EQ(ret, std::future_status::timeout);
 
     outQ->set(yap::BufferBehavior::Closed);
-    try
-    {
-        try_pop.get();
-    }
-    catch (yap::detail::ClosedError &e)
-    {
-    }
-    catch (...)
-    {
-        FAIL() << "Wrong exception emitted";
-    }
+    EXPECT_THROW(try_pop.get(), yap::detail::ClosedError);
 
-    try
-    {
-        generatorStage.stop();
-    }
-    catch (...)
-    {
-        FAIL() << "Stopping a consumed stage should not throw";
-    }
+    EXPECT_NO_THROW(generatorStage.stop())
+        << "Stopping a consumed stage should not throw";
 }
 
 TEST(TestStage, CheckSink)
@@ -120,28 +95,51 @@ TEST(TestStage, CheckSink)
     EXPECT_EQ(ret, std::future_status::timeout);
 
     inQ->set(yap::BufferBehavior::Closed);
-    try
-    {
-        try_pop.get();
-    }
-    catch (yap::detail::ClosedError &e)
-    {
-    }
-    catch (...)
-    {
-        FAIL() << "Wrong exception emitted";
-    }
+    EXPECT_THROW(try_pop.get(), yap::detail::ClosedError);
 
-    try
-    {
-        sinkStage.stop();
-    }
-    catch (...)
-    {
-        FAIL() << "Stopping a consumed stage should not throw";
-    }
+    EXPECT_NO_THROW(sinkStage.stop())
+        << "Stopping a consumed stage should not throw";
 }
 
 TEST(TestStage, CheckTransformation)
 {
+    auto inQ = std::make_shared<yap::BufferQueue<std::future<int>>>();
+    auto outQ =
+        std::make_shared<yap::BufferQueue<std::future<std::pair<int, bool>>>>();
+
+    for (std::size_t i(1); i <= tcn::kMidInputSz; ++i)
+    {
+        inQ->push(yap::make_ready_future<int>(static_cast<int>(i)));
+    }
+    inQ->push(yap::make_exceptional_future<int>(yap::GeneratorExit{}));
+
+    yap::Stage<int, std::pair<int, bool>> transformStage(
+        [](int val) { return std::make_pair(val, tcn::is_humble(val)); });
+
+    transformStage.start(inQ, outQ);
+
+    auto val{0u}, expected{1u};
+    while (tcn::kMidInputSz != val)
+    {
+        auto [cur, isHumble] = outQ->pop().get();
+        EXPECT_EQ(expected, cur);
+        EXPECT_EQ(isHumble, tcn::is_humble(expected));
+
+        ++expected;
+        val = cur;
+    }
+
+    transformStage.consume(); // No further IO should be done after this call.
+    EXPECT_THROW(outQ->pop().get(), yap::GeneratorExit);
+
+    // Should block since queue is and will remain empty.
+    auto try_pop = std::async([&] { return outQ->pop(); });
+    auto ret = try_pop.wait_for(1ms);
+    EXPECT_EQ(ret, std::future_status::timeout);
+
+    outQ->set(yap::BufferBehavior::Closed);
+    EXPECT_THROW(try_pop.get(), yap::detail::ClosedError);
+
+    EXPECT_NO_THROW(transformStage.stop())
+        << "Stopping a consumed stage should not throw";
 }
