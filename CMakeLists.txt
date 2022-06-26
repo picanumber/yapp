@@ -27,7 +27,7 @@ SET(USED_LIBS
 
 if (WIN32)
 else()
-    add_compile_options(-Wall -Wextra -pedantic)
+    add_compile_options(-Wall -Wextra -pedantic -fconcepts)
 endif()
 
 add_subdirectory(examples)
