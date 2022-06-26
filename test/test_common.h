@@ -2,7 +2,9 @@
 #pragma once
 
 #include <chrono>
+#if __cpp_concepts
 #include <concepts>
+#endif
 #include <utility>
 
 using namespace std::chrono_literals;
@@ -36,7 +38,11 @@ template <class T> class MoveOnly
     }
 };
 
+#if __cpp_concepts
 template <std::integral I> class Iota
+#else
+template <class I> class Iota
+#endif
 {
     I _val;
 
@@ -51,7 +57,11 @@ template <std::integral I> class Iota
     }
 };
 
+#if __cpp_concepts
 bool is_humble(std::integral auto i)
+#else
+bool is_humble(auto i)
+#endif
 {
     if (i <= 1)
     {
