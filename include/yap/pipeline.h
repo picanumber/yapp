@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <mutex>
+#include <tuple>
 
 namespace yap
 {
@@ -18,22 +19,61 @@ enum class ReturnValue : uint8_t
     NoOp
 };
 
+/**
+ * @brief Parallel data processing pipeline
+ * - with one thread per stage,
+ * - buffering between stages,
+ * - allowing transformations on the data types flowing through.
+ *
+ * @tparam Ts The <IN,OUT> type transformations imposed on every stage of the
+ * pipeline.
+ */
 class pipeline
 {
   public:
     virtual ~pipeline() = default;
 
+    /**
+     * @brief Start data processing. Stages will continuously pull from the
+     * Generator and pass data to subsequent processors, until the Sink stage is
+     * reached.
+     *
+     * @return A member of the ReturnValue enumeration.
+     */
     virtual ReturnValue run() = 0;
+
+    /**
+     * @brief Ceases all processing stages and clears data left in the
+     * intermediate buffers. Subsequent "run" commands will start fresh.
+     *
+     * @return A member of the ReturnValue enumeration.
+     */
     virtual ReturnValue stop() = 0;
+
+    /**
+     * @brief Ceases all processing stages. Subsequent "run" commands will use
+     * any data left in the intermediate buffers.
+     *
+     * @return A member of the ReturnValue enumeration.
+     */
     virtual ReturnValue pause() = 0;
+
+    /**
+     * @brief Process all generated data until the generator stage finishes,
+     * i.e. throws the "GeneratorExit" exception.
+     *
+     * @return A member of the ReturnValue enumeration.
+     */
     virtual ReturnValue consume() = 0;
 };
 
 /**
- * @brief Parallel data processing pipeline with one thread per stage.
+ * @brief Realization of the parallel data processing pipeline, for arbitrary
+ * combinations of data transformations over arbitrary stages.
  *
- * @tparam Ts The <IN,OUT> type transformations imposed on every stage of the
- * pipeline.
+ * @tparam Ts Deduced during the pipeline construction stages. Users need not
+ * specify this typelist. It holds the sequence of <IN,OUT> transformations data
+ * is going through over each each stage.
  */
 template <class... Ts> class Pipeline : public pipeline
 {
@@ -49,13 +89,10 @@ template <class... Ts> class Pipeline : public pipeline
     template <class F, class... Us> Pipeline(Pipeline<Us...> &&pl, F &&fun);
     Pipeline(Pipeline<Ts...> &&other);
 
-    ~Pipeline();
+    ~Pipeline() override;
 
     ReturnValue run() override;
     ReturnValue stop() override;
-    // TODO(picanumber): Consider pause to behave identically to stop, only the
-    // buffers are not cleared. Probably removes the need for "freeze" behavior
-    // in buffers.
     ReturnValue pause() override;
     ReturnValue consume() override;
 
@@ -63,6 +100,7 @@ template <class... Ts> class Pipeline : public pipeline
     template <class...> friend class Pipeline;
 
     ReturnValue runImpl();
+    ReturnValue ceaseProcessing();
 
   private:
     using buffers_t = buffer_list_t<Ts...>;
@@ -99,8 +137,7 @@ template <class... Ts> Pipeline<Ts...>::Pipeline(Pipeline<Ts...> &&other)
 
     _buffers.swap(other._buffers);
     _stages.swap(other._stages);
-
-    _state = other._state;
+    std::swap(_state, other._state);
 }
 
 template <class... Ts> Pipeline<Ts...>::~Pipeline()
@@ -112,7 +149,7 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
 {
     auto ret = ReturnValue::NoOp;
 
-    if (State::Idle == _state)
+    if (State::Idle == _state || State::Paused == _state)
     {
         auto startStages = [this]<std::size_t... Is>(std::index_sequence<Is...>)
         {
@@ -140,6 +177,7 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
                                 std::get<I>(_buffers));
                         }
                     }
+                    (void)this;
                 };
 
             (startStage(std::integral_constant<std::size_t, Is>{}), ...);
@@ -150,16 +188,28 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::runImpl()
         _state = State::Running;
         ret = ReturnValue::Ok;
     }
-    else if (State::Paused == _state)
-    {
-        std::apply(
-            [](auto &...args) {
-                (args->set(BufferBehavior::WaitOnEmpty), ...);
-            },
-            _buffers);
 
-        _state = State::Running;
-        ret = ReturnValue::Ok;
+    return ret;
+}
+
+template <class... Ts> ReturnValue Pipeline<Ts...>::ceaseProcessing()
+{
+    auto ret = ReturnValue::NoOp;
+
+    if (State::Running == _state)
+    {
+        if constexpr (std::tuple_size_v<buffers_t>)
+        {
+            auto stoppers = std::apply(
+                [](auto &...args) { return std::array{args->stop()...}; },
+                _stages);
+
+            std::apply(
+                [](auto &...args) { (args->set(BufferBehavior::Closed), ...); },
+                _buffers);
+
+            ret = ReturnValue::Ok;
+        }
     }
 
     return ret;
@@ -173,26 +223,18 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::run()
 
 template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
 {
-    auto ret = ReturnValue::NoOp;
     std::lock_guard lk(_cmdMtx);
 
+    auto ret = ceaseProcessing();
     if (State::Running == _state || State::Paused == _state)
     {
-        if constexpr (std::tuple_size_v<buffers_t>)
-        {
-            auto stoppers = std::apply(
-                [](auto &...args) { return std::array{args->stop()...}; },
-                _stages);
+        std::apply(
+            [](auto &...args) {
+                ((args->clear(), args->set(BufferBehavior::WaitOnEmpty)), ...);
+            },
+            _buffers);
 
-            std::apply(
-                [](auto &...args) { (args->set(BufferBehavior::Closed), ...); },
-                _buffers);
-
-            _state = State::Idle;
-            ret = ReturnValue::Ok;
-        }
-
-        std::apply([](auto &...args) { (args->clear(), ...); }, _buffers);
+        _state = State::Idle;
     }
 
     return ret;
@@ -200,17 +242,18 @@ template <class... Ts> ReturnValue Pipeline<Ts...>::stop()
 
 template <class... Ts> ReturnValue Pipeline<Ts...>::pause()
 {
-    auto ret = ReturnValue::NoOp;
     std::lock_guard lk(_cmdMtx);
 
-    if (_state == State::Running)
+    auto ret = ceaseProcessing();
+    if (State::Running == _state)
     {
         std::apply(
-            [](auto &...args) { (args->set(BufferBehavior::Frozen), ...); },
+            [](auto &...args) {
+                (args->set(BufferBehavior::WaitOnEmpty), ...);
+            },
             _buffers);
 
         _state = State::Paused;
-        ret = ReturnValue::Ok;
     }
 
     return ret;

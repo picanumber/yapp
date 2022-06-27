@@ -88,17 +88,15 @@ TEST(TestPipeline, PauseAndKill)
     }
 
     pl.pause();
-    auto acValueOnPause = atomicCounter.exchange(0);
-    std::this_thread::sleep_for(1ms);
-    EXPECT_LE(atomicCounter.load(), 1ul);
 
-    if (1 == atomicCounter.load())
-    {
-        // The sink method sneaked an execution after pause.
-        // Pause means data exchange between stages is frozen, but if a method
-        // is running during pause, this run can finish.
-        EXPECT_EQ(acValueOnPause + 1, counter);
-    }
+    // Verify the stage function isn't called after pause.
+    auto acValueOnPause = atomicCounter.exchange(0);
+    auto ncValueOnPause = std::exchange(counter, 0);
+    EXPECT_EQ(acValueOnPause, ncValueOnPause);
+    std::this_thread::sleep_for(1ms);
+
+    EXPECT_EQ(atomicCounter.load(), 0ul);
+    EXPECT_EQ(counter, 0ul);
 }
 
 TEST(TestPipeline, PauseResume)
@@ -121,24 +119,14 @@ TEST(TestPipeline, PauseResume)
     }
 
     pl.pause();
-    auto acValueOnPause = atomicCounter.exchange(0);
-    std::this_thread::sleep_for(1ms);
-    EXPECT_LE(atomicCounter.load(), 1ul);
 
-    if (1 == atomicCounter.load())
-    {
-        // The sink method sneaked an execution after pause.
-        // Pause means data exchange between stages is frozen, but if a method
-        // is running during pause, this run can finish.
-        EXPECT_EQ(acValueOnPause + 1, counter);
-    }
+    EXPECT_EQ(atomicCounter.load(), counter);
+    auto acValueOnPause = atomicCounter.load();
 
     EXPECT_NO_THROW({
         pl.run(); // Resume the pipeline;
-        while (atomicCounter < 1'000)
-        {
-            // Allow some data to flow.
-        }
+        std::this_thread::sleep_for(1ms);
+        EXPECT_GE(atomicCounter.load(), acValueOnPause);
         pl.stop();
     });
 }
