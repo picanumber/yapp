@@ -2,6 +2,16 @@
 
 ![pipeline design](assets/pipeline_diagram2.png)
 
+# Contents
+1. [Design](##Design)
+2. [Motivation](##Motivation)
+3. [Construction](##Construction)
+4. [Operations](##Operations)
+5. [Examples](##Examples)
+6. [Installation](##Installation)
+
+## Design
+
 yap stands for __yet another pipeline__. It is a zero dependency, header only library providing a multi-threaded implementation of the pipeline pattern. This enables a user to define a series of transformations where:
 
 1. Each stage runs in its own thread.
@@ -12,8 +22,10 @@ yap stands for __yet another pipeline__. It is a zero dependency, header only li
 
 ## Motivation
 
-why yet another -> zero dependecies / vanilla c++ / no extra libraries
-why pipeline at all -> ...
+* Zero dependencies
+* Vanilla c++, depends on C++20 alone
+* Using C++ standard `<thread>` library
+* why pipeline at all -> ...
 
 ## Construction
 
@@ -56,6 +68,8 @@ The object returned from the `make_pipeline` function, is a `unique_ptr<yap::pip
 ### Pause
 
 ### Consume
+
+## Examples
 
 ## Installation
 
