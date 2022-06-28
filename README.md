@@ -8,7 +8,13 @@
 - [Design](#Design)
 - [Motivation](#Motivation)
 - [Construction](#Construction)
+  - [Strongly typed](#Strongly typed)
+  - [Polymorphic](#Polymorphic)
 - [Operations](#Operations)
+  - [Run](#Run)
+  - [Stop](#Stop)
+  - [Pause](#Pause)
+  - [Consume](#Consume)
 - [Examples](#Examples)
 - [Installation](#Installation)
 
@@ -26,7 +32,7 @@ Using a pipeline can be as simple as:
 
 ```cpp
 auto pln = yap::Pipeline{} | dataReader | stage1 | stage2 | storeOutput;
-pln.run();
+pln.run();  // Non-blocking call.
 ```
 
 ## Motivation
