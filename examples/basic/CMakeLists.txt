@@ -2,3 +2,6 @@ include_directories(${YAP_INTERNAL_INCLUDE_DIRECTORY})
 
 add_executable(use_non_copyable_type use_non_copyable_type.cpp)
 target_link_libraries(use_non_copyable_type ${USED_LIBS})
+
+add_executable(nthreaded_stages nthreaded_stages.cpp)
+target_link_libraries(nthreaded_stages ${USED_LIBS})
