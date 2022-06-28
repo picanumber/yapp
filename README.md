@@ -8,7 +8,7 @@
 - [Design](#Design)
 - [Motivation](#Motivation)
 - [Construction](#Construction)
-  - [Strongly typed](#Strongly typed)
+  - [Strongly typed](#Strongly-typed)
   - [Polymorphic](#Polymorphic)
 - [Operations](#Operations)
   - [Run](#Run)
