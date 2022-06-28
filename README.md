@@ -106,7 +106,8 @@ pp->operation();  // Polymorphic pipeline.
 The `run` method fires up the task processing threads on each stage. Note that since there's buffering between stages, unstable latency of stages is accounted for and data is pushed as forward as possible to be available for processing as soon as possible.
 
 ```cpp
-ps.run();  // A running pipeline stops on its destructor.
+ps.run();  // Non blocking-call. Fires up worker threads and continues.
+           // A running pipeline will stops on its destructor.
 ```
 
 No preconditions are imposed to the `run` method apart from having a properly constructed object.
