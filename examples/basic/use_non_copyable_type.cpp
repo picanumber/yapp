@@ -48,16 +48,16 @@ int main()
     auto pl = yap::Pipeline{} | generator | transform | sink;
     pl.run();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
     std::cout << "Pausing\n";
     pl.pause();
     std::cout << "Paused\n";
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     std::cout << "Resuming\n";
     pl.run();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
     std::cout << "Stopping\n";
     pl.stop();
     std::cout << "Stopped\n";
