@@ -1,3 +1,0 @@
-- name: Code Coverage Report
-  uses: romeovs/lcov-reporter-action@v0.2.11
-
