@@ -45,25 +45,21 @@ int main()
         output.emplace_back(std::move(arg));
     };
 
-    yap::Pipeline pipe0;
-    yap::Pipeline pipe1(std::move(pipe0), generator);
-
-    yap::Pipeline pipe2(std::move(pipe1), transform);
-    yap::Pipeline pipe3(std::move(pipe2), sink);
-    pipe3.run();
+    auto pl = yap::Pipeline{} | generator | transform | sink;
+    pl.run();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     std::cout << "Pausing\n";
-    pipe3.pause();
+    pl.pause();
     std::cout << "Paused\n";
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "Resuming\n";
-    pipe3.run();
+    pl.run();
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "Stopping\n";
-    pipe3.stop();
+    pl.stop();
     std::cout << "Stopped\n";
 
     return 0;
