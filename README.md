@@ -1,6 +1,9 @@
 # yap
 
-[![Ubuntu](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml) [![Codecov](https://github.com/picanumber/yap_prelude/actions/workflows/codecov.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/codecov.yml) [![Style](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml) [![Memory](https://github.com/picanumber/yap_prelude/actions/workflows/asan.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/asan.yml) [![Threading](https://github.com/picanumber/yap_prelude/actions/workflows/tsan.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/tsan.yml)
+[![Ubuntu](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml)
+[![Style](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml)
+[![Memory](https://github.com/picanumber/yap_prelude/actions/workflows/asan.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/asan.yml)
+[![Threading](https://github.com/picanumber/yap_prelude/actions/workflows/tsan.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/tsan.yml)
 
 ![pipeline design](assets/pipeline_diagram2.png)
 
