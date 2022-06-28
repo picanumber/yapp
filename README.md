@@ -47,11 +47,12 @@ yap is provided as an alternative to pipelines in large general purpose librarie
 * Easily get acquainted with the parallel pipeline pattern.
 * Just use the "pipeline" part.
 
-you can try-out yap as a library having:
+you can try-out yap, which sports:
 
 * Zero dependencies.
 * Vanilla c++20.
 * Exclusive use of C++ standard facilities like `<thread>` and friends.
+* No wrapping for user operations. Callables (function objects, lambdas, functions) are provided "as is" and __metaprogramming is responsible for stiching them into pipeline stages__.
 
 ## Construction
 
