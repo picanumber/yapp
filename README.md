@@ -1,14 +1,16 @@
+# yap
+
 [![Ubuntu](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml) [![Codecov](https://github.com/picanumber/yap_prelude/actions/workflows/codecov.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/codecov.yml) [![Style](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml) [![Memory](https://github.com/picanumber/yap_prelude/actions/workflows/asan.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/asan.yml) [![Threading](https://github.com/picanumber/yap_prelude/actions/workflows/tsan.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/tsan.yml)
 
 ![pipeline design](assets/pipeline_diagram2.png)
 
-# Contents
-1. [Design](##Design)
-2. [Motivation](##Motivation)
-3. [Construction](##Construction)
-4. [Operations](##Operations)
-5. [Examples](##Examples)
-6. [Installation](##Installation)
+## Contents
+- [Design](#Design)
+- [Motivation](#Motivation)
+- [Construction](#Construction)
+- [Operations](#Operations)
+- [Examples](#Examples)
+- [Installation](#Installation)
 
 ## Design
 
@@ -32,7 +34,7 @@ yap stands for __yet another pipeline__. It is a zero dependency, header only li
 This section outlines how to create a pipeline. To help drive our points, assume the existence of the following callables:
 
 ```cpp
-auto generator = [val = 0] { return val++; };
+auto generator = [val = 0] () mutable { return val++; };
 auto transform = [](int val) { return std::to_string(val); };
 auto sink = [](std::string const& s) { std::cout << s << std::endl; };
 ```
