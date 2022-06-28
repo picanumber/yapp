@@ -47,11 +47,12 @@ yap is provided as an alternative to pipelines in large general purpose librarie
 * Easily get acquainted with the parallel pipeline pattern.
 * Just use the "pipeline" part.
 
-you can try-out yap as a library having:
+you can try-out yap, which sports:
 
 * Zero dependencies.
 * Vanilla c++20.
 * Exclusive use of C++ standard facilities like `<thread>` and friends.
+* No wrapping for user operations. Callables (function objects, lambdas, functions) are provided "as is" and __metaprogramming is responsible for stiching them into pipeline stages__.
 
 ## Construction
 
@@ -105,7 +106,8 @@ pp->operation();  // Polymorphic pipeline.
 The `run` method fires up the task processing threads on each stage. Note that since there's buffering between stages, unstable latency of stages is accounted for and data is pushed as forward as possible to be available for processing as soon as possible.
 
 ```cpp
-ps.run();  // A running pipeline stops on its destructor.
+ps.run();  // Non blocking-call. Fires up worker threads and continues.
+           // A running pipeline will stops on its destructor.
 ```
 
 No preconditions are imposed to the `run` method apart from having a properly constructed object.
