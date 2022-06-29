@@ -19,6 +19,8 @@
   - [Pause](#Pause)
   - [Consume](#Consume)
 - [Examples](#Examples)
+  - [Basic examples](#Basic-examples)
+  - [Top k words](#Top-k-words)
 - [Installation](#Installation)
 
 ## Design
@@ -159,7 +161,18 @@ Consuming a pipeline leaves it in an idle state, with no threads running. `run` 
 
 ## Examples
 
-Examples can be found in the respective [folder](https://github.com/picanumber/yap/tree/main/examples). Each example folder is accompanied by a `README.md` file that documents it.
+Examples can be found in the respective [folder](https://github.com/picanumber/yap/tree/main/examples). Each example folder is accompanied by a `README.md` file that documents it. In summary, the contents are the following:
+
+### [Basic examples](https://github.com/picanumber/yap/tree/main/examples/basic)
+
+These examples showcase simple usages of the library, and how it successfully manages:
+
+* Non copyable data.
+* Stages that return futures, e.g. because of an internal thread-pool.
+
+### [Top k words](https://github.com/picanumber/yap/tree/main/examples/top_k_words)
+
+We analyze an input file and output the `k` most frequent words in the text.
 
 ## Installation
 
