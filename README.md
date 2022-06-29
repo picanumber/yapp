@@ -13,6 +13,7 @@
 - [Construction](#Construction)
   - [Strongly typed](#Strongly-typed)
   - [Polymorphic](#Polymorphic)
+  - [Side notes](#Side-notes)
 - [Operations](#Operations)
   - [Run](#Run)
   - [Stop](#Stop)
@@ -93,6 +94,14 @@ auto pp = yap::make_pipeline(generator, transform, sink);
 ```
 
 The object returned from the `make_pipeline` function, is a `unique_ptr<yap::pipeline>`. This lower-case `pipeline` base class, is the abstract definition of a pipeline and even though information on type transformations is lost, all operations are carried out in way consistent to its construction properties. A polymorphic pipeline cannot be chained further, since information on how to relay types is lost.
+
+### Side notes
+
+The callable objects used in the construction of a pipeline must be copyable, since this is a requirement of `std::function` which is used internally to store them. In case your object is inherently non-copyable (e.g. it contains an `iftream` member) and you want to avoid the infrastructure to provide copy semantics, you can wrap it in a `yap::Copyable` instance:
+
+```cpp
+auto ps = yap::Pipeline{} | generator | yap::Copyable(transform) | sink;
+```
 
 ## Operations
 
