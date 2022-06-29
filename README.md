@@ -55,7 +55,7 @@ you can try-out yap, which sports:
 * Zero dependencies.
 * Vanilla c++20.
 * Exclusive use of C++ standard facilities like `<thread>` and friends.
-* No wrapping for user operations. Callables (function objects, lambdas, functions) are provided "as is" and __metaprogramming is responsible for stiching them into pipeline stages__.
+* __Metaprogrammed stitching of user provided callables into pipeline stages__.
 
 ## Construction
 
