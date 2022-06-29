@@ -52,7 +52,10 @@ struct LineSplitter
         std::istringstream iss(line);
         while (std::getline(iss, word, ' '))
         {
-            words.emplace_back(std::move(word));
+            if (!word.empty())
+            {
+                words.emplace_back(std::move(word));
+            }
         }
 
         return words;
@@ -86,14 +89,17 @@ class FrequencyCounter
 
 class KTopWords
 {
+  public:
     using list_t = std::list<std::pair<std::size_t, std::string>>;
 
-    list_t _kMostFrequent;
+  private:
+    list_t &_kMostFrequent;
     std::unordered_map<std::string, list_t::iterator> _index;
     std::size_t _k;
 
   public:
-    explicit KTopWords(std::size_t K) : _k(K)
+    explicit KTopWords(std::size_t K, list_t &list)
+        : _kMostFrequent(list), _k(K)
     {
         if (0 == _k)
         {
@@ -140,11 +146,6 @@ class KTopWords
             }
         }
     }
-
-    auto get() const
-    {
-        return _kMostFrequent;
-    }
 };
 
 } // namespace
@@ -165,10 +166,10 @@ int main(int argc, char *argv[])
 
     std::cout << "Counting top " << k << " words of " << argv[1] << std::endl;
 
-    auto topW = std::make_shared<KTopWords>(k);
+    KTopWords::list_t list;
 
     auto pl = yap::Pipeline{} | FileReader(argv[1]) | LineSplitter{} |
-              FrequencyCounter{} | [topW](auto newFreq) { (*topW)(newFreq); };
+              FrequencyCounter{} | KTopWords(k, list);
 
     auto start = std::chrono::steady_clock::now();
     pl.consume();
@@ -179,9 +180,9 @@ int main(int argc, char *argv[])
         << std::chrono::duration_cast<std::chrono::milliseconds>(dur).count()
         << " ms\n\n";
 
-    for (auto [freq, word] : topW->get())
+    for (auto [freq, word] : list)
     {
-        std::cout << freq << " : " << word << std::endl;
+        std::cout << freq << " : \"" << word << "\"\n";
     }
 
     return 0;

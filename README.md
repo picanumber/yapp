@@ -97,11 +97,13 @@ The object returned from the `make_pipeline` function, is a `unique_ptr<yap::pip
 
 ### Side notes
 
-The callable objects used in the construction of a pipeline must be copyable, since this is a requirement of `std::function` which is used internally to store them. In case your object is inherently non-copyable (e.g. it contains an `iftream` member) and you want to avoid the infrastructure to provide copy semantics, you can wrap it in a `yap::Copyable` instance:
+The callable objects used in the construction of a pipeline must be copyable, since this is a requirement of `std::function` which is used internally to store them. In case your object is inherently non-copyable (e.g. it contains an `ifstream` member) and you want to avoid the infrastructure to provide copy semantics, you can wrap it in a `yap::Copyable` instance:
 
 ```cpp
 auto ps = yap::Pipeline{} | generator | yap::Copyable(transform) | sink;
 ```
+
+On the other hand, __data moved through pipeline stages can be move-only__, as shown in an [example](https://github.com/picanumber/yap/blob/main/examples/basic/use_non_copyable_type.cpp).
 
 ## Operations
 
