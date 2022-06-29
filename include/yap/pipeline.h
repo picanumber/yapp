@@ -311,4 +311,23 @@ std::unique_ptr<pipeline> make_pipeline(Fs &&...transforms)
     return std::make_unique<pipeline_t>((Pipeline{} | ... | transforms));
 }
 
+template <class F> class Copyable
+{
+    std::shared_ptr<F> _fun;
+
+  public:
+    template <class J>
+    explicit Copyable(J &&call)
+        : _fun(std::make_shared<F>(std::forward<J>(call)))
+    {
+    }
+
+    template <class... Args> decltype(auto) operator()(Args &&...args)
+    {
+        return std::invoke(*_fun, std::forward<Args>(args)...);
+    }
+};
+
+template <class J> Copyable(J &&) -> Copyable<J>;
+
 } // namespace yap
