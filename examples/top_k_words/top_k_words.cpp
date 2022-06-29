@@ -1,8 +1,10 @@
 #include "yap/pipeline.h"
 
+#include <algorithm>
+#include <chrono>
 #include <fstream>
 #include <iostream>
-#include <map>
+#include <list>
 #include <memory>
 #include <sstream>
 #include <stdexcept>
@@ -84,15 +86,18 @@ class FrequencyCounter
 
 class KTopWords
 {
-    std::vector<std::pair<std::size_t, std::string>> _topWords;
+    using list_t = std::list<std::pair<std::size_t, std::string>>;
+
+    list_t _kMostFrequent;
+    std::unordered_map<std::string, list_t::iterator> _index;
     std::size_t _k;
 
   public:
-    KTopWords(std::size_t K) : _k(K)
+    explicit KTopWords(std::size_t K) : _k(K)
     {
         if (0 == _k)
         {
-            throw std::logic_error("Top 0 words is not well defined");
+            throw std::logic_error("What do you mean top 0?");
         }
     }
 
@@ -100,21 +105,45 @@ class KTopWords
     {
         for (auto &[freq, word] : newFreqs)
         {
-            _topWords.emplace(
-                std::lower_bound(_topWords.begin(), _topWords.end(),
-                                 std::make_pair(freq, word), std::greater<>{}),
-                freq, word);
-
-            if (_topWords.size() > _k)
+            if (_kMostFrequent.empty() || _kMostFrequent.back().first < freq)
             {
-                _topWords.pop_back();
+                auto it = _index.find(word);
+                if (it != _index.end())
+                {
+                    auto listIt = it->second;
+
+                    // Place word where its new frequency would mandate.
+                    _kMostFrequent.splice(
+                        std::lower_bound(
+                            _kMostFrequent.begin(), _kMostFrequent.end(),
+                            std::make_pair(freq, word), std::greater<>{}),
+                        _kMostFrequent, listIt);
+
+                    listIt->first = freq; // Update the frequency value.
+                }
+                else
+                {
+                    auto newItemIt = _kMostFrequent.insert(
+                        std::lower_bound(
+                            _kMostFrequent.begin(), _kMostFrequent.end(),
+                            std::make_pair(freq, word), std::greater<>{}),
+                        std::make_pair(freq, word));
+                    _index.emplace(word, newItemIt);
+
+                    if (_kMostFrequent.size() > _k)
+                    {
+                        auto w = _kMostFrequent.back().second;
+                        _kMostFrequent.pop_back();
+                        _index.erase(w);
+                    }
+                }
             }
         }
     }
 
     auto get() const
     {
-        return _topWords;
+        return _kMostFrequent;
     }
 };
 
@@ -140,9 +169,16 @@ int main(int argc, char *argv[])
 
     auto pl = yap::Pipeline{} | FileReader(argv[1]) | LineSplitter{} |
               FrequencyCounter{} | [topW](auto newFreq) { (*topW)(newFreq); };
-    pl.consume();
 
-    std::cout << "\nTop " << k << " words\n";
+    auto start = std::chrono::steady_clock::now();
+    pl.consume();
+    auto dur = std::chrono::steady_clock::now() - start;
+
+    std::cout
+        << "\nTop " << k << " words discovered in "
+        << std::chrono::duration_cast<std::chrono::milliseconds>(dur).count()
+        << " ms\n\n";
+
     for (auto [freq, word] : topW->get())
     {
         std::cout << freq << " : " << word << std::endl;
