@@ -118,7 +118,7 @@ The `run` method fires up the task processing threads on each stage. Note that s
 
 ```cpp
 ps.run();  // Non blocking-call. Fires up worker threads and continues.
-           // A running pipeline will stops on its destructor.
+           // A running pipeline will stop on its destructor.
 ```
 
 No preconditions are imposed to the `run` method apart from having a properly constructed object.
