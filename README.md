@@ -1,4 +1,4 @@
-# yap
+# yapp
 
 [![Ubuntu](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml)
 [![Style](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml)
@@ -24,7 +24,7 @@
 
 ## Design
 
-yap is __yet another pipeline__. It is a zero dependency, header only library providing a __multi-threaded implementation of the pipeline pattern__. It enables users to define a series of stages where:
+yapp is __yet another parallel pipeline__. It is a zero dependency, header only library providing a __multi-threaded implementation of the pipeline pattern__. It enables users to define a series of stages where:
 
 1. Each stage runs in its own thread.
 2. Buffering exists between stages to regulate stages of different latency.
@@ -41,14 +41,14 @@ pln.run();  // Non-blocking call.
 
 ## Motivation
 
-yap is provided as an alternative to pipelines in large general purpose libraries for multi-threading. If you want to:
+yapp is provided as an alternative to pipelines in large general purpose libraries for multi-threading. If you want to:
 
 * Smoothly collaborate with code using standard thread facilities.
 * Avoid the (bigger) learning curve.
 * Easily get acquainted with the parallel pipeline pattern.
 * Just use the "pipeline" part.
 
-you can try-out yap, which sports:
+you can try-out yapp, which sports:
 
 * Zero dependencies.
 * Vanilla c++20.
