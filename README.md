@@ -55,6 +55,8 @@ you can try-out yap, which sports:
 * Exclusive use of C++ standard facilities like `<thread>` and friends.
 * __Metaprogrammed stitching of user provided callables into pipeline stages__.
 
+For a short introduction to the parallel pipeline pattern you can [check this post](https://ngathanasiou.wordpress.com/2022/06/30/pipelines-to-the-rescue/).
+
 ## Construction
 
 This section outlines how to create a pipeline. To help drive our points, assume the existence of:
