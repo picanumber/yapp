@@ -12,7 +12,7 @@
 namespace yap
 {
 
-enum class ReturnValue : uint8_t
+enum class ReturnValue  : uint8_t
 {
     Ok,
     Error,
@@ -40,7 +40,7 @@ class pipeline
      *
      * @return A member of the ReturnValue enumeration.
      */
-    virtual ReturnValue run() = 0;
+    virtual ReturnValue run()=0;
 
     /**
      * @brief Ceases all processing stages and clears data left in the
@@ -82,10 +82,12 @@ template <class... Ts> class Pipeline : public pipeline
         Idle,
         Running,
         Paused
+
     };
 
   public:
-    Pipeline() = default;
+    Pipeline(  ) 
+        = default;
     template <class F, class... Us> Pipeline(Pipeline<Us...> &&pl, F &&fun);
     Pipeline(Pipeline<Ts...> &&other);
 
