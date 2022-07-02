@@ -48,7 +48,7 @@ class pipeline
      *
      * @return A member of the ReturnValue enumeration.
      */
-    virtual  ReturnValue stop() = 0;
+    virtual ReturnValue stop() = 0;
 
     /**
      * @brief Ceases all processing stages. Subsequent "run" commands will use
