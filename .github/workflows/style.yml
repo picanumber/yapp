@@ -10,7 +10,6 @@ jobs:
       matrix:
         path:
           - 'include'
-          - 'src'
           - 'test'
 
     steps:
