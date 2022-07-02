@@ -47,7 +47,7 @@ TEST(TestPipeline, Stop)
     auto mockSink = [&counter, &atomicCounter](auto) {
         ++counter;
         ++atomicCounter;
-    };
+     };
 
     auto pl = yap::Pipeline{} | tcn::Iota(1u) | mockSink;
     pl.run();
