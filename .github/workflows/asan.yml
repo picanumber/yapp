@@ -1,0 +1,8 @@
+name: Memory
+
+on:
+  workflow_dispatch:
+
+jobs:
+  address_sanitizer:
+    uses: picanumber/sanitizer_workflows/.github/workflows/asan.yml@main
