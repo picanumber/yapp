@@ -9,3 +9,5 @@ on:
 jobs:
   thread_sanitizer:
     uses: picanumber/sanitizer_workflows/.github/workflows/tsan.yml@main  
+    with:
+      testDir: 'test' # Explicit specification of the test directory.
