@@ -3,6 +3,9 @@
 [![Ubuntu](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml)
 [![Style](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/style.yml)
 
+[![Threading](https://github.com/picanumber/yapp/actions/workflows/tsan.yml/badge.svg)](https://github.com/picanumber/yapp/actions/workflows/tsan.yml)
+[![Memory](https://github.com/picanumber/yapp/actions/workflows/asan.yml/badge.svg)](https://github.com/picanumber/yapp/actions/workflows/asan.yml)
+
 ![pipeline design](assets/pipeline_diagram2.png)
 
 ## Contents
