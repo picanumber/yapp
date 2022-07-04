@@ -172,7 +172,7 @@ Consuming a pipeline leaves it in an idle state, with no threads running. `run` 
 
 ## Examples
 
-Examples can be found in the respective [folder](https://github.com/picanumber/yap/tree/main/examples). Each example folder is accompanied by a `README.md` file that documents it. In summary, the contents are the following:
+Examples can be found in the respective [folder](https://github.com/picanumber/yap/tree/main/examples). Each example folder is accompanied by a `README.md` file that documents it. In summary, the contents are:
 
 ### [Basic examples](https://github.com/picanumber/yap/tree/main/examples/basic)
 

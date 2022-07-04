@@ -1,0 +1,13 @@
+name: Memory
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  address_sanitizer:
+    uses: picanumber/sanitizer_workflows/.github/workflows/asan.yml@main
+    with:
+      testDir: 'test' # Explicit specification of the test directory.
