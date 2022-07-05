@@ -187,6 +187,10 @@ These examples showcase simple usages of the library, and how it successfully ma
 
 We analyze an input file and output the `k` most frequent words in the text.
 
+### [2D data operations](https://github.com/picanumber/yap/tree/main/examples/2d_data_operations)
+
+Usage of the framework with stages of substantial computational effort, while passing 2d data from one stage to another. Serves as a profiling experiment to deduce next steps and drive optimization efforts.
+
 ## Installation
 
 This is a header only library. You can download and build the test suite which is using Google Test, but all you need to do to use the library is to point your build system to the `include` folder.
