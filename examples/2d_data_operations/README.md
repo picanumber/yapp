@@ -15,8 +15,8 @@ The choice of 4 stages is made because my puny system will only provide 5 CPUs, 
 
 ### High points
 
-* CPU utilization 77.7%
-* Most of the time all logical cores are used
+* CPU utilization 77.7%. The missing 22.3% is the main thread waiting for the pipeline to finish.
+* Most of the time all logical cores are used.
 * Spin and overhead time is 0
 
 ### Low points
