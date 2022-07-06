@@ -7,7 +7,7 @@ This example serves as a profiling baseline. It is a "compute-intensive" program
 3. Apply a stencil like modification
 4. Attach a sink stage, that simply burns CPU cycles and makes sure the operation is not discarded
 
-The choice of 4 stages is made because my puny system will only provide 4 CPUs. Higher utilization can be achieved by attaching more stages, but causing over-subscription will only skew the result of the analysis; the goal is to evaluate at the limit of what the hardware provides. The __Intel VTune profiler__ was used to conduct the following analyses:
+The choice of 4 stages is made because my puny system will only provide 5 CPUs, so one main thread and four pipeline stages are a comfy fit. Higher utilization can be achieved by attaching more stages, but causing over-subscription will only skew the result of the analysis; the goal is to evaluate at the limit of what the hardware provides. The __Intel VTune profiler__ was used to conduct the following analyses:
 
 ## 1. Threading
 
