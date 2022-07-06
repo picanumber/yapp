@@ -2,8 +2,8 @@
 
 This example serves as a profiling baseline. It is a "compute-intensive" program where 4 stages operate on `vector<vector<T>>` or 2D data:
 
-1. Generate random 2D of size 255x255
-2. Apply normalization
+1. Generate 10'000 data points of random 255x255 int data
+2. Apply normalization, transform data to float type
 3. Apply a stencil like modification
 4. Attach a sink stage, that simply burns CPU cycles and makes sure the operation is not discarded
 
