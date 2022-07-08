@@ -2,6 +2,7 @@
 #pragma once
 
 #include "buffer_queue.h"
+#include "runtime_utilities.h"
 
 #include <atomic>
 #include <functional>
