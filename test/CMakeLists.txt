@@ -31,4 +31,5 @@ endmacro()
 package_add_test(test_buffer_queue test_buffer_queue.cpp)
 package_add_test(test_pipeline test_pipeline.cpp)
 package_add_test(test_stage test_stage.cpp)
+package_add_test(test_consume_utility test_consume_utility.cpp)
 

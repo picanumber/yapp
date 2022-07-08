@@ -34,16 +34,6 @@ struct ClosedError : std::logic_error
 
 } // namespace detail
 
-/**
- * @brief Raised when a generator or coroutine is closed.
- */
-struct GeneratorExit : std::logic_error
-{
-    GeneratorExit() : std::logic_error("GeneratorExit")
-    {
-    }
-};
-
 template <class T> class BufferQueue final
 {
     std::deque<T> _contents;
