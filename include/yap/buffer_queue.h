@@ -49,7 +49,7 @@ template <class T> class BufferQueue final
     std::deque<T> _contents;
     mutable std::mutex _mtx;
     mutable std::condition_variable _bell;
-    std::atomic<BufferBehavior> _popCondition{BufferBehavior::WaitOnEmpty};
+    BufferBehavior _popCondition{BufferBehavior::WaitOnEmpty};
 
   public:
     void clear()
@@ -108,7 +108,7 @@ template <class T> class BufferQueue final
     {
         {
             std::lock_guard lk(_mtx);
-            _popCondition.store(val);
+            _popCondition = val;
         }
         _bell.notify_all();
     }

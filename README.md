@@ -22,6 +22,7 @@
 - [Examples](#Examples)
   - [Basic examples](#Basic-examples)
   - [Top k words](#Top-k-words)
+  - [2D data operations](#2D-data-operations)
 - [Installation](#Installation)
 
 ## Design
