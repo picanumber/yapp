@@ -18,13 +18,12 @@ namespace
 
 class FileReader
 {
-    std::shared_ptr<std::ifstream> _input;
+    std::ifstream _input;
 
   public:
-    FileReader(const char *fname)
-        : _input(std::make_shared<std::ifstream>(fname))
+    explicit FileReader(const char *fname) : _input(fname)
     {
-        if (!_input->is_open())
+        if (!_input.is_open())
         {
             throw std::logic_error("Cannot open input file");
         }
@@ -33,7 +32,7 @@ class FileReader
     std::string operator()()
     {
         std::string line;
-        if (!std::getline(*_input, line))
+        if (!std::getline(_input, line))
         {
             throw yap::GeneratorExit{};
         }
