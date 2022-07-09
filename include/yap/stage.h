@@ -11,6 +11,7 @@
 #include <mutex>
 #include <stdexcept>
 #include <thread>
+#include <type_traits>
 
 namespace yap
 {
@@ -62,20 +63,100 @@ template <class T, class E> std::future<T> make_exceptional_future(E ex)
 namespace detail
 {
 
-template <class IN, class OUT> struct Function
+template <class IN, class OUT> struct CallConcept
 {
-    using type = std::function<OUT(IN)>;
+    virtual ~CallConcept() = default;
+    virtual OUT call(IN) = 0;
 };
-template <class OUT> struct Function<void, OUT>
+
+template <class OUT> struct CallConcept<void, OUT>
 {
-    using type = std::function<OUT()>;
+    virtual ~CallConcept() = default;
+    virtual OUT call() = 0;
 };
-template <class IN, class OUT>
-using function_t = typename Function<IN, OUT>::type;
+
+template <typename F, class IN, class OUT>
+struct CallModel : CallConcept<IN, OUT>
+{
+    F f;
+
+    explicit CallModel(F f) : f(std::move(f))
+    {
+    }
+
+    OUT call(IN arg) override
+    {
+        return f(std::move(arg));
+    }
+};
+
+template <typename F, class OUT>
+struct CallModel<F, void, OUT> : CallConcept<void, OUT>
+{
+    F f;
+
+    explicit CallModel(F f) : f(std::move(f))
+    {
+    }
+
+    OUT call() override
+    {
+        return f();
+    }
+};
+
+/**
+ * @brief Alternative to std::function, to allow non copyable callables to be
+ * used directly in a stage.
+ *
+ * @tparam IN Input type.
+ * @tparam OUT Output type.
+ */
+template <class IN, class OUT> class Callable
+{
+    std::unique_ptr<CallConcept<IN, OUT>> impl;
+
+  public:
+    Callable() = default;
+
+    template <typename F>
+    explicit Callable(F f)
+        : impl(std::make_unique<CallModel<F, IN, OUT>>(std::move(f)))
+    {
+    }
+
+    // Allow moving.
+    Callable(Callable &&other) : impl(std::move(other.impl))
+    {
+    }
+    Callable &operator=(Callable &&other)
+    {
+        impl = std::move(other.impl);
+        return *this;
+    }
+
+    // Prevent copying.
+    Callable(const Callable &) = delete;
+    Callable(Callable &) = delete;
+    Callable &operator=(const Callable &) = delete;
+
+    // Operate on (possibly move constructed) values.
+    template <class J>
+    std::enable_if_t<not std::is_void_v<J>, OUT> operator()(J arg)
+    {
+        return impl->call(std::move(arg));
+    }
+
+    template <class J = void>
+    std::enable_if_t<std::is_void_v<J>, OUT> operator()()
+    {
+        return impl->call();
+    }
+};
 
 // Process a transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-bool process(std::function<OUT(IN)> &op,
+bool process(Callable<IN, OUT> &op,
              std::shared_ptr<BufferQueue<std::future<IN>>> &input,
              std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
@@ -103,7 +184,7 @@ bool process(std::function<OUT(IN)> &op,
 
 // Process a generator stage.
 template <class OUT>
-bool process(std::function<OUT()> &op,
+bool process(Callable<void, OUT> &op,
              std::shared_ptr<BufferQueue<std::future<void>>> & /*input*/,
              std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
@@ -131,7 +212,7 @@ bool process(std::function<OUT()> &op,
 
 // Process a sink stage.
 template <class IN>
-bool process(std::function<void(IN)> &op,
+bool process(Callable<IN, void> &op,
              std::shared_ptr<BufferQueue<std::future<IN>>> &input,
              std::shared_ptr<BufferQueue<std::future<void>>> &
              /*output*/)
@@ -161,7 +242,7 @@ bool process(std::function<void(IN)> &op,
 
 template <class IN, class OUT> class Stage
 {
-    detail::function_t<IN, OUT> _operation;
+    detail::Callable<IN, OUT> _operation;
     std::shared_ptr<BufferQueue<std::future<IN>>> _input;
     std::shared_ptr<BufferQueue<std::future<OUT>>> _output;
     std::thread _worker;
