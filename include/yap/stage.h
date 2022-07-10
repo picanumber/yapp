@@ -3,6 +3,7 @@
 
 #include "buffer_queue.h"
 #include "runtime_utilities.h"
+#include "topology.h"
 
 #include <atomic>
 #include <functional>
@@ -16,154 +17,49 @@
 namespace yap
 {
 
-/**
- * @brief Create a future that already contains a result.
- *
- * @tparam T Type to wrap into the future.
- * @tparam Args Types of the arguments passed to T's constructor.
- * @param ...args Arguments to forward into T's constructor.
- *
- * @return A future that contains a value T{args...} or void.
- */
-template <class T, class... Args>
-std::future<T> make_ready_future(Args &&...args)
-{
-    std::promise<T> p;
-    if constexpr (std::is_void_v<T>)
-    {
-        static_assert(0 == sizeof...(Args),
-                      "future<void> constructible without arguments");
-        p.set_value();
-    }
-    else
-    {
-        p.set_value(T{std::forward<Args>(args)...});
-    }
-
-    return p.get_future();
-}
-
-/**
- * @brief Create a future that contains an exception.
- *
- * @tparam T Type to wrap into the future.
- * @tparam E Type of the exception to store
- * @param ex Exception to store in the future.
- *
- * @return A future that contains the exception ex.
- */
-template <class T, class E> std::future<T> make_exceptional_future(E ex)
-{
-    std::promise<T> p;
-    p.set_exception(std::make_exception_ptr(std::move(ex)));
-
-    return p.get_future();
-}
-
 namespace detail
 {
 
-template <class IN, class OUT> struct CallConcept
-{
-    virtual ~CallConcept() = default;
-    virtual OUT call(IN) = 0;
-};
-
-template <class OUT> struct CallConcept<void, OUT>
-{
-    virtual ~CallConcept() = default;
-    virtual OUT call() = 0;
-};
-
-template <typename F, class IN, class OUT>
-struct CallModel : CallConcept<IN, OUT>
-{
-    F f;
-
-    explicit CallModel(F f) : f(std::move(f))
-    {
-    }
-
-    OUT call(IN arg) override
-    {
-        return f(std::move(arg));
-    }
-};
-
-template <typename F, class OUT>
-struct CallModel<F, void, OUT> : CallConcept<void, OUT>
-{
-    F f;
-
-    explicit CallModel(F f) : f(std::move(f))
-    {
-    }
-
-    OUT call() override
-    {
-        return f();
-    }
-};
-
-/**
- * @brief Alternative to std::function, to allow non copyable callables to be
- * used directly in a stage.
- *
- * @tparam IN Input type.
- * @tparam OUT Output type.
- */
-template <class IN, class OUT> class Callable
-{
-    std::unique_ptr<CallConcept<IN, OUT>> impl;
-
-  public:
-    Callable() = default;
-
-    template <typename F>
-    explicit Callable(F f)
-        : impl(std::make_unique<CallModel<F, IN, OUT>>(std::move(f)))
-    {
-    }
-
-    // Allow moving.
-    Callable(Callable &&other) : impl(std::move(other.impl))
-    {
-    }
-    Callable &operator=(Callable &&other)
-    {
-        impl = std::move(other.impl);
-        return *this;
-    }
-
-    // Prevent copying.
-    Callable(const Callable &) = delete;
-    Callable(Callable &) = delete;
-    Callable &operator=(const Callable &) = delete;
-
-    // Operate on (possibly move constructed) values.
-    template <class J>
-    std::enable_if_t<not std::is_void_v<J>, OUT> operator()(J arg)
-    {
-        return impl->call(std::move(arg));
-    }
-
-    template <class J = void>
-    std::enable_if_t<std::is_void_v<J>, OUT> operator()()
-    {
-        return impl->call();
-    }
-};
-
 // Process a transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-bool process(Callable<IN, OUT> &op,
-             std::shared_ptr<BufferQueue<std::future<IN>>> &input,
-             std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
+std::enable_if_t<not detail::kIsFiltered<OUT>, bool> process(
+    Callable<IN, OUT> &op, std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+    std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
     try
     {
         // expect not null input/output
         output->push(make_ready_future<OUT>(op(input->pop().get())));
+        return true;
+    }
+    catch (detail::ClosedError &e)
+    {
+        return false;
+    }
+    catch (GeneratorExit &e)
+    {
+        output->push(make_exceptional_future<OUT>(e));
+        return false;
+    }
+    catch (...)
+    {
+        // Op threw an exception. No point in propagating the data.
+        return true;
+    }
+}
+
+// Process a filtering transformation stage. Returns whether to keep processing.
+template <class IN, class OUT>
+std::enable_if_t<detail::kIsFiltered<OUT>, bool> process(
+    Callable<IN, OUT> &op, std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+    std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
+{
+    try
+    {
+        if (auto result = op(input->pop().get()); result.data)
+        {
+            output->push(make_ready_future<OUT>(std::move(result)));
+        }
         return true;
     }
     catch (detail::ClosedError &e)
@@ -242,7 +138,7 @@ bool process(Callable<IN, void> &op,
 
 template <class IN, class OUT> class Stage
 {
-    detail::Callable<IN, OUT> _operation;
+    Callable<IN, OUT> _operation;
     std::shared_ptr<BufferQueue<std::future<IN>>> _input;
     std::shared_ptr<BufferQueue<std::future<OUT>>> _output;
     std::thread _worker;

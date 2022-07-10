@@ -19,6 +19,9 @@
   - [Stop](#Stop)
   - [Pause](#Pause)
   - [Consume](#Consume)
+- [Topology](#Topology)
+  - [Filter](#Filter)
+  - [Farm](#Farm)
 - [Examples](#Examples)
   - [Basic examples](#Basic-examples)
   - [Top k words](#Top-k-words)
@@ -167,6 +170,56 @@ pp->consume();
 ```
 
 Consuming a pipeline leaves it in an idle state, with no threads running. `run` can be called once again, assuming the generator can produce more data, but `stop` or `pause` have no effect. A pipeline whose generator throws `yap::GeneratorExit` will anyways cease when all input is processed. The `consume` method is a way to explicitly wait for data to be processed and make the pipeline "runable" again.
+
+## Topology
+
+This section describes the tools to modify a pipeline's topology. Such a modification alters the linear flow of information from one stage to its subsequent, to provide properties that are attractive to specific computational patterns.
+
+### Filter
+
+A _filtering stage_ is one that can discard part of its input. As depicted below, `S2` can control the input items to pass to subsequent stages, while being free to perform any type of transformation:
+
+![filtering_stage](assets/filter_pattern.png)
+
+A callable returning a `yap::Filtered` is considered a filtering stage. The filtered object is just a wrapper around `std::optional<T>`:
+
+```cpp
+template <class T>
+struct Filtered
+{
+    std::optional<T> data;
+
+    Filtered() = default;
+    explicit Filtered(T &&data) : data(std::move(data)) {}
+    explicit Filtered(std::optional<T> &&data) : data(std::move(data)) {}
+};
+```
+
+The `std::optional` type was not used directly, since explicit use cases exist for `nullopt`, for example a stage handling "empty" or "filler" inputs. To avoid propagating data further down the pipeline, simply place an empty optional in the `Filtered<T>` return value of your stage. Conversely, filling the `data` member with a value means passing the data to the next stage.  
+
+To __provide explicit syntax to your pipeline declaration__, a helper `Filter` caller can be used. This is a "call forwarding" wrapper that can either use `std::optional` or `yap::Filtered` return types:
+
+```cpp
+auto gen = [val = 0]() mutable { return val++; };
+
+// We'll wrap operation in `Filter`, so we can also use `std::optional` return type.
+auto transform = [](int val) {
+  std::optional<int> ret;
+  if (val % 2) ret.emplace(val);
+  return ret;
+};
+
+auto printer = [](yap::Filtered<int> val) { cout << val << endl; };
+
+auto oddPrinter = yap::Pipeline{} | gen | yap::Filter(std::move(transform)) | intPrinter{};
+//     explicitly declared filtering stage^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+__A stage following a filter__ should accept a `yap::Filtered<T>` input. It can safely assume that the `data` member of the input is not `nullopt`.
+
+### Farm
+
+![farmed_stage](assets/farm_pattern.png)
 
 ## Examples
 
