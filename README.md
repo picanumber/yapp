@@ -22,6 +22,8 @@
 - [Topology](#Topology)
   - [Filter](#Filter)
   - [Farm](#Farm)
+- [Utilities](#Utilities)
+  - [Consumer](#Consumer)
 - [Examples](#Examples)
   - [Basic examples](#Basic-examples)
   - [Top k words](#Top-k-words)
@@ -175,13 +177,13 @@ Consuming a pipeline leaves it in an idle state, with no threads running. `run` 
 
 This section describes the tools to modify a pipeline's topology. Such a modification alters the linear flow of information from one stage to its subsequent, to provide properties that are attractive to specific computational patterns.
 
-### Filter
+### [Filter](https://github.com/picanumber/yapp/blob/main/examples/basic/use_filtered.cpp)
 
 A _filtering stage_ is one that can discard part of its input. As depicted below, `S2` can control the input items to pass to subsequent stages, while being free to perform any type of transformation:
 
 ![filtering_stage](assets/filter_pattern.png)
 
-A callable returning a `yap::Filtered` is considered a filtering stage. The filtered object is just a wrapper around `std::optional<T>`:
+__A callable returning `yap::Filtered` is considered a filtering stage__. The filtered object is just a wrapper around `std::optional<T>`:
 
 ```cpp
 template <class T>
@@ -202,14 +204,15 @@ To __provide explicit syntax to your pipeline declaration__, a helper `Filter` c
 ```cpp
 auto gen = [val = 0]() mutable { return val++; };
 
-// We'll wrap operation in `Filter`, so we can also use `std::optional` return type.
+// We'll wrap this in `Filter`, so we can also use a `std::optional` return type.
 auto transform = [](int val) {
   std::optional<int> ret;
   if (val % 2) ret.emplace(val);
   return ret;
 };
 
-auto printer = [](yap::Filtered<int> val) { cout << val << endl; };
+// Printer follows a filtering stage, so its input must be of type `Filtered<T>`.
+auto printer = [](yap::Filtered<int> val) { cout << val.data.value() << endl; };
 
 auto oddPrinter = yap::Pipeline{} | gen | yap::Filter(std::move(transform)) | intPrinter{};
 //     explicitly declared filtering stage^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -221,6 +224,10 @@ __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can 
 
 ![farmed_stage](assets/farm_pattern.png)
 
+## Utilities
+
+### Consumer
+
 ## Examples
 
 Examples can be found in the respective [folder](https://github.com/picanumber/yap/tree/main/examples). Each example folder is accompanied by a `README.md` file that documents it. In summary, the contents are:
@@ -231,6 +238,7 @@ These examples showcase simple usages of the library, and how it successfully ma
 
 * Non copyable data.
 * Stages that return futures, e.g. because of an internal thread-pool.
+* Filtering stages.
 
 ### [Top k words](https://github.com/picanumber/yap/tree/main/examples/top_k_words)
 
