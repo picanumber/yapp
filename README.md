@@ -211,11 +211,12 @@ auto transform = [](int val) {
   return ret;
 };
 
-// Printer follows a filtering stage, so its input must be of type `Filtered<T>`.
 auto printer = [](yap::Filtered<int> val) { cout << val.data.value() << endl; };
 
-auto oddPrinter = yap::Pipeline{} | gen | yap::Filter(std::move(transform)) | intPrinter{};
-//     explicitly declared filtering stage^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+auto oddPrinter = yap::Pipeline{} 
+    | gen 
+    | yap::Filter(std::move(transform))  // Explicitly declared filtering stage. 
+    | intPrinter{};
 ```
 
 __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can safely assume that the `data` member of the input is not `nullopt`.
