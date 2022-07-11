@@ -204,7 +204,7 @@ To __provide explicit syntax to your pipeline declaration__, a helper `Filter` c
 ```cpp
 auto oddPrinter = yap::Pipeline{} 
     | gen 
-    | yap::Filter(transform)  // Explicitly declared filtering stage. 
+    | yap::Filter(s2)  // Explicitly declared filtering stage. 
     | intPrinter{};
 
 /*
@@ -212,7 +212,7 @@ Assuming the existence of:
 
 auto gen = [val = 0]() mutable { return val++; };
 
-auto transform = [](int val) {
+auto s2 = [](int val) {
   std::optional<int> ret;
   if (val % 2) ret.emplace(val);
   return ret;
