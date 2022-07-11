@@ -230,7 +230,25 @@ __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can 
 
 ## Utilities
 
+Utilities that accompany the library are described here. Creating a huge suite of accompanying tools is a non-goal for this library, however there should be provision for patterns that are often encountered. In that spirit, the following tools are made.
+
 ### Consumer
+
+A consumer is a generator that can use a standard iterable container. It handles:
+
+* Going through the elements of a container.
+* Quitting the pipeline on "end of input".
+
+Usage on a container `c` is pretty straightforward:
+
+```cpp
+// Input values are copied into the pipeline. Container is left untouched.
+auto p1 = yap::Pipeline{} | yap::Consume(c.begin(), c.end()) | ...
+
+// Input values are moved into the pipeline. Container has "moved-from" objects.
+auto p2 = yap::Pipeline{} | 
+  yap::Consume(std::make_move_iterator(c.begin()), std::make_move_iterator(c.end())) | ...
+```
 
 ## Examples
 
