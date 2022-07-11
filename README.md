@@ -199,12 +199,19 @@ struct Filtered
 
 The `std::optional` type was not used directly, since explicit use cases exist for `nullopt`, for example a stage handling "empty" or "filler" inputs. To avoid propagating data further down the pipeline, simply place an empty optional in the `Filtered<T>` return value of your stage. Conversely, filling the `data` member with a value means passing the data to the next stage.  
 
-To __provide explicit syntax to your pipeline declaration__, a helper `Filter` caller can be used. This is a "call forwarding" wrapper that can either use `std::optional` or `yap::Filtered` return types:
+To __provide explicit syntax to your pipeline declaration__, a helper `Filter` caller can be used. This is a "call forwarding" wrapper that can use either  `std::optional` or `yap::Filtered` return types:
 
 ```cpp
+auto oddPrinter = yap::Pipeline{} 
+    | gen 
+    | yap::Filter(transform)  // Explicitly declared filtering stage. 
+    | intPrinter{};
+
+/*
+Assuming the existence of:
+
 auto gen = [val = 0]() mutable { return val++; };
 
-// We'll wrap this in `Filter`, so we can also use a `std::optional` return type.
 auto transform = [](int val) {
   std::optional<int> ret;
   if (val % 2) ret.emplace(val);
@@ -212,11 +219,7 @@ auto transform = [](int val) {
 };
 
 auto printer = [](yap::Filtered<int> val) { cout << val.data.value() << endl; };
-
-auto oddPrinter = yap::Pipeline{} 
-    | gen 
-    | yap::Filter(std::move(transform))  // Explicitly declared filtering stage. 
-    | intPrinter{};
+*/
 ```
 
 __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can safely assume that the `data` member of the input is not `nullopt`.
