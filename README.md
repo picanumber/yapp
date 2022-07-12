@@ -199,24 +199,27 @@ struct Filtered
 
 The `std::optional` type was not used directly, since explicit use cases exist for `nullopt`, for example a stage handling "empty" or "filler" inputs. To avoid propagating data further down the pipeline, simply place an empty optional in the `Filtered<T>` return value of your stage. Conversely, filling the `data` member with a value means passing the data to the next stage.  
 
-To __provide explicit syntax to your pipeline declaration__, a helper `Filter` caller can be used. This is a "call forwarding" wrapper that can either use `std::optional` or `yap::Filtered` return types:
+To __provide explicit syntax to your pipeline declaration__, a helper `Filter` caller can be used. This is a "call forwarding" wrapper that can use either  `std::optional` or `yap::Filtered` return types:
 
 ```cpp
+auto oddPrinter = yap::Pipeline{} 
+    | gen 
+    | yap::Filter(s2)  // Explicitly declared filtering stage. 
+    | intPrinter{};
+
+/*
+Assuming the existence of:
+
 auto gen = [val = 0]() mutable { return val++; };
 
-// We'll wrap this in `Filter`, so we can also use a `std::optional` return type.
-auto transform = [](int val) {
+auto s2 = [](int val) {
   std::optional<int> ret;
   if (val % 2) ret.emplace(val);
   return ret;
 };
 
 auto printer = [](yap::Filtered<int> val) { cout << val.data.value() << endl; };
-
-auto oddPrinter = yap::Pipeline{} 
-    | gen 
-    | yap::Filter(std::move(transform))  // Explicitly declared filtering stage. 
-    | intPrinter{};
+*/
 ```
 
 __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can safely assume that the `data` member of the input is not `nullopt`.
@@ -227,7 +230,25 @@ __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can 
 
 ## Utilities
 
+Utilities that accompany the library are described here. Creating a huge suite of accompanying tools is a non-goal for this library, however there should be provision for patterns that are often encountered. In that spirit, the following tools are made.
+
 ### Consumer
+
+A consumer is a generator that can use a standard iterable container. It handles:
+
+* Going through the elements of a container.
+* Quitting the pipeline on "end of input".
+
+Usage on a container `c` is pretty straightforward:
+
+```cpp
+// Input values are copied into the pipeline. Container is left untouched.
+auto p1 = yap::Pipeline{} | yap::Consume(c.begin(), c.end()) | ...
+
+// Input values are moved into the pipeline. Container has "moved-from" objects.
+auto p2 = yap::Pipeline{} | 
+  yap::Consume(std::make_move_iterator(c.begin()), std::make_move_iterator(c.end())) | ...
+```
 
 ## Examples
 
