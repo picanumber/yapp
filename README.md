@@ -206,20 +206,6 @@ auto oddPrinter = yap::Pipeline{}
     | gen 
     | yap::Filter(s2)  // Explicitly declared filtering stage. 
     | intPrinter{};
-
-/*
-Assuming the existence of:
-
-auto gen = [val = 0]() mutable { return val++; };
-
-auto s2 = [](int val) {
-  std::optional<int> ret;
-  if (val % 2) ret.emplace(val);
-  return ret;
-};
-
-auto printer = [](yap::Filtered<int> val) { cout << val.data.value() << endl; };
-*/
 ```
 
 __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can safely assume that the `data` member of the input is not `nullopt`.
