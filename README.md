@@ -137,7 +137,7 @@ auto res = pp.stop();
 
 if (yap::ReturnValue::NoOp == res)
 {
-  std::cout << "The pipeline was not running" << std::endl;
+    std::cout << "The pipeline was not running" << std::endl;
 }
 
 pp.stop();  // No effect, we just stopped above.
