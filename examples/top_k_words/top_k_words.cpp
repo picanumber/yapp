@@ -137,9 +137,8 @@ class KTopWords
 
                     if (_kMostFrequent.size() > _k)
                     {
-                        auto w = _kMostFrequent.back().second;
+                        _index.erase(_kMostFrequent.back().second);
                         _kMostFrequent.pop_back();
-                        _index.erase(w);
                     }
                 }
             }
