@@ -22,14 +22,6 @@ template <class T> struct Filtered
     }
 };
 
-namespace detail
-{
-
-template <class> constexpr bool kIsFiltered = false;
-template <class T> constexpr bool kIsFiltered<Filtered<T>> = true;
-
-} // namespace detail
-
 template <class F> auto Filter(F &&operation)
 {
     return [op = std::forward<F>(operation)](auto &&...args) {
