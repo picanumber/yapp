@@ -9,6 +9,16 @@
 namespace yap
 {
 
+/**
+ * @brief Designates objects produced from a filtering stage.
+ *
+ * @details A filtering stage is one that processes N number of input objects
+ * and produces <=N output objects. When a filtering stage ingests an input I
+ * and produces an object with no value (empty optional), subsequent stages
+ * ignore the data flow that started with I.
+ *
+ * @tparam T Type of the stored data.
+ */
 template <class T> struct Filtered
 {
     std::optional<T> data;
@@ -26,6 +36,36 @@ template <class F> auto Filter(F &&operation)
 {
     return [op = std::forward<F>(operation)](auto &&...args) {
         return Filtered(std::invoke(op, std::forward<decltype(args)>(args)...));
+    };
+}
+
+/**
+ * @brief Designates objects produced from a hatching stage.
+ *
+ * @details A hatching stage is one that processes N number of input objects and
+ * produces >=N output objects. This implies that after its first invocation it
+ * is able to be invoked without any arguments. When a hatching stage produces a
+ * Hatched object with no value (empty optional), nullary invocations stop.
+ *
+ * @tparam T Type of the stored data.
+ */
+template <class T> struct Hatched
+{
+    std::optional<T> data;
+
+    Hatched() = default;
+    explicit Hatched(T &&data) : data(std::move(data))
+    {
+    }
+    explicit Hatched(std::optional<T> &&data) : data(std::move(data))
+    {
+    }
+};
+
+template <class F> auto Hatch(F &&operation)
+{
+    return [op = std::forward<F>(operation)](auto &&...args) {
+        return Hatched(std::invoke(op, std::forward<decltype(args)>(args)...));
     };
 }
 

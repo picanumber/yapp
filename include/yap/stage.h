@@ -80,6 +80,40 @@ process(Callable<IN, OUT> &op,
     }
 }
 
+// Process a hatching transformation stage. Returns whether to keep processing.
+template <class IN, class OUT>
+    requires(instantiation_of<OUT, Hatched>) bool
+process(Callable<IN, OUT> &op,
+        std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+        std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
+{
+    try
+    {
+
+        auto result = op(input->pop().get());
+        while (result.data)
+        {
+            output->push(make_ready_future<OUT>(std::move(result)));
+            result = op();
+        }
+        return true;
+    }
+    catch (detail::ClosedError &e)
+    {
+        return false;
+    }
+    catch (GeneratorExit &e)
+    {
+        output->push(make_exceptional_future<OUT>(e));
+        return false;
+    }
+    catch (...)
+    {
+        // Op threw an exception. No point in propagating the data.
+        return true;
+    }
+}
+
 // Process a generator stage.
 template <class OUT>
 bool process(Callable<void, OUT> &op,
