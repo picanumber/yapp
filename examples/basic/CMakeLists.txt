@@ -1,5 +1,7 @@
 include_directories(${YAP_INTERNAL_INCLUDE_DIRECTORY})
 
+set(CMAKE_CXX_STANDARD 20)
+
 add_executable(use_non_copyable_type use_non_copyable_type.cpp)
 target_link_libraries(use_non_copyable_type ${USED_LIBS})
 
