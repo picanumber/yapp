@@ -82,19 +82,18 @@ process(Callable<IN, OUT> &op,
 
 // Process a hatching transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-    requires(instantiation_of<OUT, Hatched>) bool
+    requires(instantiation_of<IN, Hatched>) bool
 process(Callable<IN, OUT> &op,
         std::shared_ptr<BufferQueue<std::future<IN>>> &input,
         std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
     try
     {
-
         auto result = op(input->pop().get());
-        while (result.data)
+        while (result)
         {
             output->push(make_ready_future<OUT>(std::move(result)));
-            result = op();
+            result = op(IN{});
         }
         return true;
     }

@@ -8,3 +8,6 @@ target_link_libraries(nthreaded_stages ${USED_LIBS})
 
 add_executable(use_filtered use_filtered.cpp)
 target_link_libraries(use_filtered ${USED_LIBS})
+
+add_executable(use_hatched use_hatched.cpp)
+target_link_libraries(use_hatched ${USED_LIBS})
