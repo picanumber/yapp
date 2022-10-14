@@ -20,7 +20,7 @@ jobs:
         compiler:
           - pkg: g++-11
             exe: g++-11
-          - pkg: clang++-11
+          - pkg: clang-11
             exe: clang++-11
  
 
