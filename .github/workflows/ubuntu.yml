@@ -26,6 +26,9 @@ jobs:
         path: ${{ github.workspace }}/${{ env.INSTALL_LOCATION }}
         key: ${{ runner.os }}-dependencies
 
+    - name: Install GCC
+      uses: egor-tensin/setup-gcc@v1
+
     - name: install GoogleTest
       if: ${{ steps.cache.output.cache-hit != 'true' }}
       run: |
