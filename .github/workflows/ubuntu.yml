@@ -18,10 +18,10 @@ jobs:
     strategy:
       matrix:
         compiler:
-          - pkg: g++-10
-            exe: g++-10
           - pkg: g++-11
             exe: g++-11
+          - pkg: clang++-11
+            exe: clang++-11
  
 
     runs-on: ubuntu-latest
