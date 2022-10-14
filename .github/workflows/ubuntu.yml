@@ -20,9 +20,8 @@ jobs:
         compiler:
           - pkg: g++-11
             exe: g++-11
-          - pkg: g++-12
-            exe: g++-12
- 
+          - pkg: g++-10
+            exe: g++-10
 
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]')"
