@@ -6,6 +6,11 @@ if (${CMAKE_PROJECT_NAME}_ENABLE_CODE_COVERAGE)
   verbose_message("Code coverage is enabled and provided with GCC.")
 endif()
 
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+	cmake_policy(SET CMP0135 NEW)
+endif()
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -33,4 +38,5 @@ package_add_test(test_pipeline test_pipeline.cpp)
 package_add_test(test_stage test_stage.cpp)
 package_add_test(test_consume_utility test_consume_utility.cpp)
 package_add_test(test_filtered_pipeline test_filtered_pipeline.cpp)
+package_add_test(test_hatching_pipeline test_hatching_pipeline.cpp)
 

@@ -2,6 +2,7 @@
 #pragma once
 
 #include "buffer_queue.h"
+#include "compile_time_utilities.h"
 #include "runtime_utilities.h"
 #include "topology.h"
 
@@ -22,9 +23,9 @@ namespace detail
 
 // Process a transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-std::enable_if_t<not detail::kIsFiltered<OUT>, bool> process(
-    Callable<IN, OUT> &op, std::shared_ptr<BufferQueue<std::future<IN>>> &input,
-    std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
+bool process(Callable<IN, OUT> &op,
+             std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+             std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
     try
     {
@@ -50,15 +51,49 @@ std::enable_if_t<not detail::kIsFiltered<OUT>, bool> process(
 
 // Process a filtering transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-std::enable_if_t<detail::kIsFiltered<OUT>, bool> process(
-    Callable<IN, OUT> &op, std::shared_ptr<BufferQueue<std::future<IN>>> &input,
-    std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
+    requires(instantiation_of<OUT, Filtered>) bool
+process(Callable<IN, OUT> &op,
+        std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+        std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
 {
     try
     {
         if (auto result = op(input->pop().get()); result.data)
         {
             output->push(make_ready_future<OUT>(std::move(result)));
+        }
+        return true;
+    }
+    catch (detail::ClosedError &e)
+    {
+        return false;
+    }
+    catch (GeneratorExit &e)
+    {
+        output->push(make_exceptional_future<OUT>(e));
+        return false;
+    }
+    catch (...)
+    {
+        // Op threw an exception. No point in propagating the data.
+        return true;
+    }
+}
+
+// Process a hatching transformation stage. Returns whether to keep processing.
+template <class IN, class OUT>
+    requires(instantiation_of<IN, Hatchable>) bool
+process(Callable<IN, OUT> &op,
+        std::shared_ptr<BufferQueue<std::future<IN>>> &input,
+        std::shared_ptr<BufferQueue<std::future<OUT>>> &output)
+{
+    try
+    {
+        auto result = op(input->pop().get());
+        while (result)
+        {
+            output->push(make_ready_future<OUT>(std::move(result)));
+            result = op(IN{});
         }
         return true;
     }

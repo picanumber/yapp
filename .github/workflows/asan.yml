@@ -7,7 +7,18 @@ on:
     branches: [ "main" ]
 
 jobs:
+
   address_sanitizer:
+    strategy:
+      matrix:
+        compiler:
+          - pkg: g++-11
+            exe: g++-11
+          - pkg: g++-10
+            exe: g++-10
+
     uses: picanumber/sanitizer_workflows/.github/workflows/asan.yml@main
     with:
       testDir: 'test' # Explicit specification of the test directory.
+      compiler_package: ${{ matrix.compiler.pkg }}
+      compiler_name: ${{ matrix.compiler.exe }}

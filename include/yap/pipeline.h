@@ -2,8 +2,8 @@
 #pragma once
 
 #include "buffer_queue.h"
+#include "pipeline_types_utilities.h"
 #include "stage.h"
-#include "type_utilities.h"
 
 #include <memory>
 #include <mutex>
