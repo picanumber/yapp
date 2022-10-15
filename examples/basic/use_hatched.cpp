@@ -34,7 +34,7 @@ int main()
             ret.emplace(curChar);
         }
 
-        return ret; // Returning a contectually "false" object, here empty
+        return ret; // Returning a contextually "false" object, here empty
                     // optional, means the input won't be hatched any more and
                     // the stage can process new values produced from the
                     // previous stage.

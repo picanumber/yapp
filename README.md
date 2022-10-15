@@ -22,6 +22,7 @@
 - [Topology](#Topology)
   - [Filter](#Filter)
   - [Farm](#Farm)
+  - [Hatch](#Hatch)
 - [Utilities](#Utilities)
   - [Consumer](#Consumer)
 - [Examples](#Examples)
@@ -202,9 +203,9 @@ The `std::optional` type was not used directly, since explicit use cases exist f
 To __provide explicit syntax to your pipeline declaration__, a helper `Filter` caller can be used. This is a "call forwarding" wrapper that can use either  `std::optional` or `yap::Filtered` return types:
 
 ```cpp
-auto oddPrinter = yap::Pipeline{} 
-    | gen 
-    | yap::Filter(s2)  // Explicitly declared filtering stage. 
+auto oddPrinter = yap::Pipeline{}
+    | gen
+    | yap::Filter(s2)  // Explicitly declared filtering stage.
     | intPrinter{};
 ```
 
@@ -213,6 +214,57 @@ __A stage following a filter__ should accept a `yap::Filtered<T>` input. It can 
 ### Farm
 
 ![farmed_stage](assets/farm_pattern.png)
+
+### [Hatch](https://github.com/picanumber/yapp/blob/main/examples/basic/use_hatched.cpp)
+
+A _hatching stage_ is one that can produce more than one outputs for a single input. In the diagram below, `S2` is such a stage:  
+
+![hatching_stage](assets/hatch_pattern.png)
+
+Note that this process is conceptually different to producing a collection of objects. __A typical example where you might want to hatch your input is when processing text files__, say line by line. If the stage that produced the lines was to scan the whole text file and output a vector of text lines (strings) then you'd face the following deficiencies:
+
+1. Extraneous memory used to hold the entirety of the text file. The program only needs a single line "in-flight" to do its processing.
+2. The next stage has to wait until the whole file has been read. The "vector of lines" implies that text processing can only begin after the text file has been read.
+
+Such a situation can be greatly improved if the "text reader" stage produces its output in a piece wise fashion: Each line that is ready, gets immediately pushed to the next stage for processing.
+
+__To create a hatching stage__ use a callable that accepts `yap::Hatchable` objects as input, a class similar in logic to `yap::Filtered` that conveys how the stage does its processing:
+
+1. The `yap::Hatchable` is convertible to `bool`. `true` means new input while `false` (empty optional) means you're still producing output from the previous input.
+2. The hatching stage outputs an object that is convertible to `bool`, e.g. an `std::optional` or again `yap::Hatchable`. __The pipeline stops processing the same input when the output is `false`__, alternatively it keeps invoking the stage with an empty `yap::Hatchable` to produce more output from the same input.
+
+```cpp
+auto exampleHatchingStage = [](yap::Hatchable<int> input)
+{
+     std::optional<char> ret;
+
+     if (val)
+     {  
+         // New Input from previous stage. Input data is non empty.
+         std::optional<int> &curInput = input.data;
+         assert(curInput);
+     }
+     else
+     {  
+         // Keep processing the last input from previous stage. Input data is empty.
+         assert(!input.data);
+     }
+
+     return ret; // Returning a contextually "false" object, here empty
+                 // optional, means the input won't be hatched any more and
+                 // the stage can process new values produced from the
+                 // previous stage.
+};
+```
+
+To __provide explicit syntax to your pipeline declaration__, a helper `OutputHatchable` caller can be used to denote the stage producing input for the hatching stage. This is a "call forwarding" wrapper that wraps the output of a stage into `yap::Hatchable` return types:
+
+```cpp
+auto hp = yap::Pipeline{}
+    | yap::OutputHatchable(generator) // The previous stage can be annotated.
+    | exampleHatchingStage
+    | sinkStage{};
+```
 
 ## Utilities
 
@@ -232,7 +284,7 @@ Usage on a container `c` is pretty straightforward:
 auto p1 = yap::Pipeline{} | yap::Consume(c.begin(), c.end()) | ...
 
 // Input values are moved into the pipeline. Container has "moved-from" objects.
-auto p2 = yap::Pipeline{} | 
+auto p2 = yap::Pipeline{} |
   yap::Consume(std::make_move_iterator(c.begin()), std::make_move_iterator(c.end())) | ...
 ```
 
