@@ -40,25 +40,26 @@ template <class F> auto Filter(F &&operation)
 }
 
 /**
- * @brief Designates objects fed to a hatching stage.
+ * @brief Designates objects fed to a hatching stage. Such objects can produce
+ * multiple outputs as a result of being processed.
  *
- * @details A hatching stage is one that processes N number of Hatched objects
- * and produces >=N output objects. This implies that after its first invocation
- * it is able to be invoked without any arguments. When a hatching stage
- * produces an object contextually convertible to false (e.g. empty optional or
- * Hatched), nullary invocations stop.
+ * @details A hatching stage is one that processes N number of Hatchable objects
+ * and produces >=N output objects. This implies that after its first
+ * invocation, a hatching stage is able to be invoked with empty(=false)
+ * arguments. When a hatching stage produces an object contextually convertible
+ * to false (e.g. empty optional or Hatchable), nullary invocations stop.
  *
  * @tparam T Type of the stored data.
  */
-template <class T> struct Hatched
+template <class T> struct Hatchable
 {
     std::optional<T> data;
 
-    Hatched() = default;
-    explicit Hatched(T &&data) : data(std::move(data))
+    Hatchable() = default;
+    explicit Hatchable(T &&data) : data(std::move(data))
     {
     }
-    explicit Hatched(std::optional<T> &&data) : data(std::move(data))
+    explicit Hatchable(std::optional<T> &&data) : data(std::move(data))
     {
     }
 
@@ -68,10 +69,11 @@ template <class T> struct Hatched
     }
 };
 
-template <class F> auto Hatch(F &&operation)
+template <class F> auto OutputHatchable(F &&operation)
 {
     return [op = std::forward<F>(operation)](auto &&...args) mutable {
-        return Hatched(std::invoke(op, std::forward<decltype(args)>(args)...));
+        return Hatchable(
+            std::invoke(op, std::forward<decltype(args)>(args)...));
     };
 }
 

@@ -82,7 +82,7 @@ process(Callable<IN, OUT> &op,
 
 // Process a hatching transformation stage. Returns whether to keep processing.
 template <class IN, class OUT>
-    requires(instantiation_of<IN, Hatched>) bool
+    requires(instantiation_of<IN, Hatchable>) bool
 process(Callable<IN, OUT> &op,
         std::shared_ptr<BufferQueue<std::future<IN>>> &input,
         std::shared_ptr<BufferQueue<std::future<OUT>>> &output)

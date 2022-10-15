@@ -38,4 +38,5 @@ package_add_test(test_pipeline test_pipeline.cpp)
 package_add_test(test_stage test_stage.cpp)
 package_add_test(test_consume_utility test_consume_utility.cpp)
 package_add_test(test_filtered_pipeline test_filtered_pipeline.cpp)
+package_add_test(test_hatching_pipeline test_hatching_pipeline.cpp)
 
