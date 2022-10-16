@@ -221,7 +221,7 @@ A _hatching stage_ is one that can produce more than one outputs for a single in
 
 ![hatching_stage](assets/hatch_pattern.png)
 
-Note that this process is conceptually different to producing a collection of objects. __A typical example where you might want to hatch your input is when processing text files__, say line by line. If the stage that produced the lines was to scan the whole text file and output a vector of text lines (strings) then you'd face the following deficiencies:
+Note that this process is __fundamentally different from producing a collection of objects__. __A typical example where you might want to hatch your input is when processing text files__, say line by line. If the stage that produced the lines was to scan the whole text file and output a vector of text lines (strings) then you'd face the following deficiencies:
 
 1. Extraneous memory used to hold the entirety of the text file. The program only needs a single line "in-flight" to do its processing.
 2. The next stage has to wait until the whole file has been read. The "vector of lines" implies that text processing can only begin after the text file has been read.
