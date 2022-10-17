@@ -1,4 +1,5 @@
 # yapp
+##### A parallel pipeline for stream processing
 
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
 [![LOC](https://tokei.rs/b1/github/picanumber/yapp)](https://github.com/XAMPPRocky/tokei)
