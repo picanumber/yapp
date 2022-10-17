@@ -224,14 +224,14 @@ A _hatching stage_ is one that can produce more than one outputs for a single in
 Note that this process is __fundamentally different from producing a collection of objects__. __A typical example where you might want to hatch your input is when processing text files__, say line by line. If the stage that produced the lines was to scan the whole text file and output a vector of text lines (strings) then you'd face the following deficiencies:
 
 1. Extraneous memory used to hold the entirety of the text file. The program only needs a single line "in-flight" to do its processing.
-2. The next stage has to wait until the whole file has been read. The "vector of lines" implies that text processing can only begin after the text file has been read.
+2. The next stage has to wait until the whole file has been read. A "vector of lines" implies that text processing can only begin __after__ reading all of the text file.
 
 Such a situation can be greatly improved if the "text reader" stage produces its output in a piece wise fashion: Each line that is ready, gets immediately pushed to the next stage for processing.
 
-__To create a hatching stage__ use a callable that accepts `yap::Hatchable` objects as input, a class similar in logic to `yap::Filtered` that conveys how the stage does its processing:
+__To create a hatching stage__ use a callable that accepts `yap::Hatchable` objects as input, a class with logic similar to `yap::Filtered` that conveys how the stage does its processing:
 
-1. The `yap::Hatchable` is convertible to `bool`. `true` means new input while `false` (empty optional) means you're still producing output from the previous input.
-2. The hatching stage outputs an object that is convertible to `bool`, e.g. an `std::optional` or again `yap::Hatchable`. __The pipeline stops processing the same input when the output is `false`__, alternatively it keeps invoking the stage with an empty `yap::Hatchable` to produce more output from the same input.
+1. The `yap::Hatchable` is convertible to `bool`. `true` means new input while `false` (empty optional) means you're still processing the last input.
+2. The hatching stage outputs an object that is convertible to `bool`, e.g. an `std::optional` or again `yap::Hatchable`. __The pipeline stops processing the same input when the output is `false`__, alternatively it keeps invoking the stage with an empty `yap::Hatchable` to produce more output from the last input.
 
 ```cpp
 auto exampleHatchingStage = [](yap::Hatchable<int> input)
