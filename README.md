@@ -2,7 +2,7 @@
 ##### A parallel pipeline for stream processing
 
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
-[![LOC](https://tokei.rs/b1/github/picanumber/yapp)](https://github.com/XAMPPRocky/tokei)
+[![](https://tokei.rs/b1/github/picanumber/yapp)](https://github.com/XAMPPRocky/tokei)
 [![license](https://img.shields.io/hexpm/l/plug)](https://github.com/picanumber/task_timetable/blob/a7b8eb6eed728255221909583d9e757b4e345a5a/LICENSE)
 
 [![Ubuntu](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/picanumber/yap_prelude/actions/workflows/ubuntu.yml)
